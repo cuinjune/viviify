@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=0.75" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <script>window.noZensmooth = true;</script>
+  <script src="/js/libs/zenscroll-min.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <header id="header">
+      <div id="header-left">
+        <div id="header-logo">
+          <h2><a class="header-item">viviify</a></h2>
+        </div>
+      </div>
+      <div id="header-right">
+        <div id="header-account">
+          <h4><a href="/account" class="header-item">Account</a></h4>
+        </div>
+        <div id="header-logout">
+          <h4><a class="header-item">Log out</a></h4>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <div id="main-top">
+        <form id="main-form">
+          <input id="main-form-search" type="text" name="search" placeholder="Search" autocomplete="off">
+        </form>
+      </div>
+      <div id="main-bottom">
+        <div id="main-projects"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const init = () => {
+      const logo = document.getElementById("header-logo");
+      const logout = document.getElementById("header-logout");
+      const form = document.getElementById("main-form");
+      const search = document.getElementById("main-form-search");
+      const projectsContainer = document.getElementById("main-projects");
+
+      logo.addEventListener("click", () => {
+        zenscroll.toY(0);
+      });
+
+      logout.addEventListener("click", () => {
+        fetch("/api/v1/user/logout", {
+          method: "GET"
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          window.location.href = "/";
+        });
+      });
+
+      const updateProjects = (searchValue) => {
+        fetch(`/api/v1/projects?${new URLSearchParams({ q: searchValue || "" })}`, {
+          method: "GET"
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            search.value = "";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            search.value = "";
+            return;
+          }
+          // clear projects container
+          while (projectsContainer.firstChild) {
+            projectsContainer.removeChild(projectsContainer.firstChild);
+          }
+          // new container
+          const newContainer = document.createElement("DIV");
+          newContainer.id = "main-project-new";
+          newContainer.className = "main-project";
+          const newHeading = document.createElement("H1");
+          newHeading.innerText = "New";
+          newContainer.appendChild(newHeading);
+          newContainer.addEventListener("click", () => {
+            // create a new project
+            fetch("/api/v1/project", {
+              method: "POST",
+              headers: { "Accept": "application/json", "Content-Type": "application/json" },
+              body: JSON.stringify({})
+            }).then(response => response.json()).then((data) => {
+              if (data.error) {
+                alert(data.message);
+                return;
+              }
+              if (!data.auth) {
+                alert(data.message);
+                return;
+              }
+              // updateProjects(search.value);
+              window.location.href = `/edit/${data.urlKey}`;;
+            });
+          });
+          projectsContainer.appendChild(newContainer);
+
+          // handle projects
+          for (let i = 0; i < data.projects.length; i++) {
+            // project container
+            const projectContainer = document.createElement("DIV");
+            projectContainer.id = `main-project${i}`;
+            projectContainer.className = "main-project";
+
+            // delete container
+            const deleteContainer = document.createElement("DIV");
+            deleteContainer.id = `main-project-delete${i}`;
+            deleteContainer.className = "main-project-delete";
+            const deleteIcon = new Image();
+            deleteIcon.className = "main-project-delete-icon";
+            deleteIcon.src = "/asset/delete.svg";
+            deleteIcon.alt = "Delete";
+            deleteContainer.appendChild(deleteIcon);
+            deleteContainer.addEventListener("click", (event) => {
+              event.stopPropagation();
+              const result = confirm("Are you sure you want to delete this project?");
+              if (!result) {
+                return;
+              }
+              // delete the project
+              fetch(`/api/v1/project/${data.projects[i].urlKey}`, {
+                method: "DELETE"
+              }).then(response => response.json()).then((data) => {
+                if (data.error) {
+                  alert(data.message);
+                  return;
+                }
+                if (!data.auth) {
+                  alert(data.message);
+                  return;
+                }
+                updateProjects(search.value);
+              });
+            });
+            projectContainer.appendChild(deleteContainer);
+
+            // content container
+            const contentContainer = document.createElement("DIV");
+            contentContainer.id = `main-project-content${i}`;
+            contentContainer.className = "main-project-content";
+            const contentPara = document.createElement("P");
+            contentPara.innerText = data.projects[i].previewText;
+            contentContainer.appendChild(contentPara);
+            contentContainer.addEventListener("click", () => {
+              // open the project
+              window.location.href = `/edit/${data.projects[i].urlKey}`;
+            });
+            projectContainer.appendChild(contentContainer);
+
+            // add project container to the projects container
+            projectsContainer.appendChild(projectContainer);
+          }
+        });
+      };
+      updateProjects();
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+      });
+
+      search.addEventListener("input", () => {
+        updateProjects(search.value);
+      });
+    }
+
+    window.addEventListener("load", () => {
+      window.setTimeout(init, 100); // projects don't update on back button page load without the delay
+    });
+
+    window.addEventListener("pageshow", (event) => { // for safari, firefox
+      if (event.persisted) {
+        window.setTimeout(init, 100); // projects don't update on back button page load without the delay
+      }
+    });
+  </script>
+</body>
+
+</html>

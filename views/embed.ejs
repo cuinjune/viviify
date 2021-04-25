@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/embed.css" />
+</head>
+
+<body>
+  <div id="container">
+    <canvas id="canvas"></canvas>
+    <img id="thumbnail" class="canvas-overlay" style="display: none;">
+    <div id="loading-icon" class="canvas-overlay" style="pointer-events: none; opacity: 0;"></div>
+    <div id="controller" class="canvas-overlay" style="opacity: 0;">
+      <div id="controller-top">
+        <div id="viviify-logo" style="pointer-events: none; opacity: 0;">
+          <h2 id="viviify-text">viviify</h2>
+        </div>
+        <div id="share" style="pointer-events: none;">
+          <div id="share-background" style="pointer-events: none; opacity: 0;">
+            <form id="share-watch" class="share-form">
+              <div id="share-watch-top" class="share-form-top">
+                <h3 id="share-watch-text" class="share-form-text">Watch:</h3>
+              </div>
+              <div id="share-watch-bottom" class="share-form-bottom">
+                <input id="share-watch-input" class="share-form-input" type="text"
+                  value="https://viviify.com/watch/<%= urlKey %>" readonly>
+                <input id="share-watch-copy" class="share-form-copy" type="submit" value="Copy">
+              </div>
+            </form>
+            <form id="share-embed" class="share-form">
+              <div id="share-embed-top" class="share-form-top">
+                <h3 id="share-embed-text" class="share-form-text">Embed:</h3>
+              </div>
+              <div id="share-embed-bottom" class="share-form-bottom">
+                <input id="share-embed-input" class="share-form-input" type="text"
+                  value='<iframe src="https://viviify.com/embed/<%= urlKey %>" width="640" height="360" frameborder="0" allow="autoplay;" allowfullscreen></iframe>'
+                  readonly>
+                <input id="share-embed-copy" class="share-form-copy" type="submit" value="Copy">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div id="controller-middle">
+        <div id="progress-background">
+          <div id="progress-bar">
+            <div id="progress-loading">
+              <div id="progress-gauge"></div>
+              <div id="progress-thumb"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="controller-bottom">
+        <div id="controller-bottom-left">
+          <div id="controller-play" class="controller-elem">
+            <img id="controller-play-icon" class="controller-item" src="/asset/play.svg" alt="Play">
+            <img id="controller-pause-icon" class="controller-item" src="/asset/pause.svg" alt="Pause">
+            <img id="controller-replay-icon" class="controller-item" src="/asset/replay.svg" alt="Replay">
+          </div>
+          <div id="controller-backward" class="controller-elem">
+            <img id="controller-backward-icon" class="controller-item" src="/asset/backward.svg" alt="Backward">
+          </div>
+          <div id="controller-forward" class="controller-elem">
+            <img id="controller-forward-icon" class="controller-item" src="/asset/backward.svg" alt="Forward">
+          </div>
+        </div>
+        <div id="controller-bottom-right">
+          <div id="controller-share" class="controller-elem">
+            <img id="controller-share-icon" class="controller-item" src="/asset/share.svg" alt="Share">
+          </div>
+          <div id="controller-fullscreen" class="controller-elem">
+            <img id="controller-fullscreen-icon" class="controller-item" src="/asset/fullscreen.svg" alt="Fullscreen">
+            <img id="controller-normalscreen-icon" class="controller-item" src="/asset/normalscreen.svg"
+              alt="Normalscreen">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const container = document.getElementById("container");
+      const canvas = document.getElementById("canvas");
+      const thumbnail = document.getElementById("thumbnail");
+      const loadingIcon = document.getElementById("loading-icon");
+      const controller = document.getElementById("controller");
+      const controllerTop = document.getElementById("controller-top");
+      const viviifyLogo = document.getElementById("viviify-logo");
+      const viviifyText = document.getElementById("viviify-text");
+      const shareBackground = document.getElementById("share-background");
+      const shareWatch = document.getElementById("share-watch");
+      const shareWatchInput = document.getElementById("share-watch-input");
+      const shareWatchCopy = document.getElementById("share-watch-copy");
+      const shareEmbed = document.getElementById("share-embed");
+      const shareEmbedInput = document.getElementById("share-embed-input");
+      const shareEmbedCopy = document.getElementById("share-embed-copy");
+      const controllerMiddle = document.getElementById("controller-middle");
+      const progressBar = document.getElementById("progress-bar");
+      const progressLoading = document.getElementById("progress-loading");
+      const progressGauge = document.getElementById("progress-gauge");
+      const progressThumb = document.getElementById("progress-thumb");
+      const controllerBottom = document.getElementById("controller-bottom");
+      const controllerPlay = document.getElementById("controller-play");
+      const controllerPlayIcon = document.getElementById("controller-play-icon");
+      const controllerPauseIcon = document.getElementById("controller-pause-icon");
+      const controllerReplayIcon = document.getElementById("controller-replay-icon");
+      const controllerBackward = document.getElementById("controller-backward");
+      const controllerBackwardIcon = document.getElementById("controller-backward-icon");
+      const controllerForward = document.getElementById("controller-forward");
+      const controllerForwardIcon = document.getElementById("controller-forward-icon");
+      const controllerShare = document.getElementById("controller-share");
+      const controllerFullscreen = document.getElementById("controller-fullscreen");
+      const controllerFullscreenIcon = document.getElementById("controller-fullscreen-icon");
+      const controllerNormalscreenIcon = document.getElementById("controller-normalscreen-icon");
+
+      if (!"<%= urlKey %>".length) {
+        container.innerHTML = "<h2>The video no longer exists</h2>";
+        return;
+      }
+
+      // the following is just to fix the audio delay in Safari
+      const AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext;
+      let audioCtx = null;
+      if (AudioContext) {
+        audioCtx = new AudioContext();
+      }
+      const getSubtitleFontSize = () => {
+        switch ("<%= subtitle %>") {
+          case "off": return 0;
+          case "tiny": return canvas.height * 0.03;
+          case "small": return canvas.height * 0.04;
+          case "medium": return canvas.height * 0.05;
+          case "large": return canvas.height * 0.06;
+          case "huge": return canvas.height * 0.07;
+          default: return canvas.height * 0.05;
+        }
+      }
+      const getSubtitleHeightRatio = () => {
+        switch ("<%= subtitle %>") {
+          case "off": return 0;
+          case "tiny": return 0.15;
+          case "small": return 0.2;
+          case "medium": return 0.25;
+          case "large": return 0.3;
+          case "huge": return 0.35;
+          default: return 0.25;
+        }
+      }
+      const debugMode = true; // set debug mode
+      const isIOS = ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+      const isAndroid = /(android)/i.test(navigator.userAgent);
+      const urlParams = new URLSearchParams(window.location.search);
+      const autoLoad = isIOS ? false : true; // should always be false on iOS to prevent autoplay
+      const autoPlay = urlParams.get("autoplay") === "1" ? true : false; // can be enabled by adding "?autoplay=1" after the URL
+      const pageLoadedTime = new Date();
+      const ctx = canvas.getContext("2d");
+      canvas.width = 1920;
+      canvas.height = 1080;
+      ctx.font = `${getSubtitleFontSize()}px Helvetica`;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.lineWidth = getSubtitleFontSize() * 0.1;
+      const subtitleWidthRatio = 0.9; // maximum subtitle width ratio
+      const subtitleHeightRatio = getSubtitleHeightRatio(); // maximum subtitle height ratio
+      const subtitleWidth = canvas.width * subtitleWidthRatio;
+      const subtitleHeight = canvas.height * subtitleHeightRatio;
+      const subtitlePosX = canvas.width * (1 - subtitleWidthRatio) / 2;
+      const subtitlePosY = canvas.height * (1 - subtitleHeightRatio);
+      const subtitleLineHeight = ctx.measureText("M").width * 1.75;
+      const minDuration = 2000; // minimum required time to start playing the first video
+      const prefixUrl = "http://104.248.224.60:8080/"; // the URL to proxy which adds CORS headers to the proxied request
+      const videoIds = []; // used to avoid using the same videos again
+      const brokenVideoIds = []; // broken video IDs
+      const progressBarWidthGap = 30; // progress bar has width of 100% - 30px
+      let state = null;
+      let segments = [];
+      let videoLength = 0;
+      let maxNumVideoIds = 8; // maximum number of video IDs to store
+      let segmentIndex = 0;
+      let playingIndices = new Set();
+      let startTime = 0;
+      let previousProgress = 0;
+      let previousTimestamp = 0;
+      let progress = 0;
+      let loadedProgress = 0;
+      let hoverTimer = null;
+      let controllerTopMouseUpTimer = null;
+      let controllerMiddleClicked = false;
+      let controllerMiddleClickedPreviousState = null;
+      let buffering = false;
+      let bufferingPreviousState = null;
+
+      const STATE = Object.freeze({
+        LOADED_PAGE: Symbol("LOADED_PAGE"),
+        GETTING_SEGMENTS: Symbol("GETTING_SEGMENTS"),
+        GOT_SEGMENTS: Symbol("GOT_SEGMENTS"),
+        DRAWING_THUMBNAIL: Symbol("DRAWING_THUMBNAIL"),
+        READY_TO_LOAD_MEDIA: Symbol("READY_TO_LOAD_MEDIA"),
+        LOADING_AUDIOS: Symbol("LOADING_AUDIOS"),
+        LOADED_AUDIOS: Symbol("LOADED_AUDIOS"),
+        LOADING_VIDEOS: Symbol("LOADING_VIDEOS"),
+        READY_TO_PLAY_VIDEOS: Symbol("READY_TO_PLAY_VIDEOS"),
+        SHOULD_PLAY_VIDEOS: Symbol("SHOULD_PLAY_VIDEOS"),
+        PLAYING_VIDEOS: Symbol("PLAYING_VIDEOS"),
+        SHOULD_PAUSE_VIDEOS: Symbol("SHOULD_PAUSE_VIDEOS"),
+        PAUSED_VIDEOS: Symbol("PAUSED_VIDEOS"),
+        SHOULD_RESUME_VIDEOS: Symbol("SHOULD_RESUME_VIDEOS"),
+        PLAYED_VIDEOS: Symbol("PLAYED_VIDEOS"),
+        ERROR: Symbol("ERROR")
+      });
+
+      const printToConsole = (message) => {
+        if (!debugMode) {
+          return;
+        }
+        console.log(message);
+      }
+
+      const showController = () => {
+        controller.style.opacity = 1;
+        controller.style.cursor = "pointer";
+      }
+
+      const hideController = () => {
+        controller.style.opacity = 0;
+        controller.style.cursor = "none";
+      }
+
+      const cancelHoverTimer = () => {
+        if (hoverTimer) {
+          window.clearTimeout(hoverTimer);
+          hoverTimer = null;
+        }
+      }
+
+      const scheduleHideController = () => {
+        cancelHoverTimer();
+        hoverTimer = window.setTimeout(() => {
+          if (state !== STATE.PLAYING_VIDEOS) {
+            return;
+          }
+          if (shareBackground.style.pointerEvents !== "none") {
+            return;
+          }
+          if (controllerMiddleClicked) {
+            return;
+          }
+          hideController();
+        }, 1500);
+      }
+
+      // set current state
+      const setState = (_state) => {
+        if (state === _state) {
+          return;
+        }
+        state = _state;
+        switch (state) {
+          case STATE.LOADED_PAGE:
+            printToConsole("Successfully loaded the page");
+            loadingIcon.style.opacity = 1;
+            break;
+          case STATE.GETTING_SEGMENTS:
+            printToConsole("Getting segments...");
+            break;
+          case STATE.GOT_SEGMENTS:
+            printToConsole("Successfully got segments");
+            break;
+          case STATE.DRAWING_THUMBNAIL:
+            printToConsole("Drawing thumbnail...");
+            break;
+          case STATE.READY_TO_LOAD_MEDIA:
+            printToConsole("Ready to load media");
+            thumbnail.style.display = "block";
+            loadingIcon.style.opacity = 0;
+            viviifyLogo.style.opacity = 1;
+            viviifyText.style.pointerEvents = "auto";
+            controllerPlayIcon.style.display = "block";
+            controllerPauseIcon.style.display = "none";
+            controllerReplayIcon.style.display = "none";
+            controllerBackwardIcon.style.opacity = 0;
+            controllerForwardIcon.style.opacity = 0;
+            showController();
+            break;
+          case STATE.LOADING_AUDIOS:
+            printToConsole("Loading audios...");
+            loadingIcon.style.opacity = 1;
+            break;
+          case STATE.LOADED_AUDIOS:
+            printToConsole("Successfully loaded audios");
+            break;
+          case STATE.LOADING_VIDEOS:
+            printToConsole("Loading videos...");
+            break;
+          case STATE.READY_TO_PLAY_VIDEOS:
+            printToConsole("Ready to play videos");
+            loadingIcon.style.opacity = 0;
+            showController();
+            break;
+          case STATE.SHOULD_PLAY_VIDEOS:
+            printToConsole("Should play videos");
+            thumbnail.style.display = "none";
+            viviifyLogo.style.opacity = 0;
+            viviifyText.style.pointerEvents = "none";
+            controllerPlayIcon.style.display = "none";
+            controllerPauseIcon.style.display = "block";
+            controllerReplayIcon.style.display = "none";
+            controllerBackwardIcon.style.opacity = 1;
+            controllerForwardIcon.style.opacity = 1;
+            hideController();
+            break;
+          case STATE.PLAYING_VIDEOS:
+            printToConsole("Playing videos...");
+            break;
+          case STATE.SHOULD_PAUSE_VIDEOS:
+            printToConsole("Should pause videos");
+            controllerPlayIcon.style.display = "block";
+            controllerPauseIcon.style.display = "none";
+            controllerReplayIcon.style.display = "none";
+            showController();
+            break;
+          case STATE.PAUSED_VIDEOS:
+            printToConsole("Paused videos");
+            break;
+          case STATE.SHOULD_RESUME_VIDEOS:
+            printToConsole("Should resume videos");
+            controllerPlayIcon.style.display = "none";
+            controllerPauseIcon.style.display = "block";
+            controllerReplayIcon.style.display = "none";
+            hideController();
+            break;
+          case STATE.PLAYED_VIDEOS:
+            printToConsole("Played videos");
+            viviifyLogo.style.opacity = 1;
+            viviifyText.style.pointerEvents = "auto";
+            controllerPlayIcon.style.display = "none";
+            controllerPauseIcon.style.display = "none";
+            controllerReplayIcon.style.display = "block";
+            controllerBackwardIcon.style.opacity = 0;
+            controllerForwardIcon.style.opacity = 0;
+            showController();
+            break;
+          case STATE.ERROR:
+            printToConsole("An error has occurred");
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+            container.innerHTML = "<h2>An error has occurred</h2>";
+            break;
+          default:
+            printToConsole("Unknown state");
+        }
+      }
+
+      const startBuffering = () => {
+        buffering = true;
+        bufferingPreviousState = state;
+        printToConsole("Buffering...");
+        loadingIcon.style.opacity = 1;
+        setState(STATE.SHOULD_PAUSE_VIDEOS);
+      }
+
+      const releaseBuffering = () => {
+        printToConsole("Buffering done");
+        loadingIcon.style.opacity = 0;
+        if (bufferingPreviousState === STATE.PLAYING_VIDEOS) {
+          setState(STATE.SHOULD_RESUME_VIDEOS);
+        }
+        bufferingPreviousState = null;
+        buffering = false;
+      }
+
+      const pausePlayingMedia = () => {
+        for (const segment of segments) {
+          if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
+            segment.elem.pause();
+          }
+        }
+      }
+
+      const stopPlayingMedia = () => {
+        for (const segment of segments) {
+          if (segment.elem && segment.elem.readyState) {
+            if (!segment.elem.paused) {
+              segment.elem.pause();
+            }
+            segment.elem.currentTime = 0;
+          }
+        }
+      }
+
+      const playMedia = (segment, elapsedTime, frameTime) => {
+        // update media's currentTime if the difference is larger than frameTime
+        const currentTime = (elapsedTime - segment.start) / 1000;
+        if (Math.abs(currentTime - segment.elem.currentTime) > frameTime) {
+          segment.elem.currentTime = currentTime;
+        }
+        if (state === STATE.PLAYING_VIDEOS) {
+          const playPromise = segment.elem.play();
+          if (playPromise) {
+            playPromise.catch((error) => {
+              printToConsole(error);
+            });
+          }
+        }
+      }
+
+      const drawVideo = (segment) => {
+        ctx.drawImage(segment.elem, segment.xpos, segment.ypos, segment.width, segment.height);
+      }
+
+      const drawSubtitle = (segment) => {
+        let newSubtitlePosY = subtitlePosY - ((segment.lines.length - 1) * subtitleLineHeight) / 2;
+        for (let i = 0; i < segment.lines.length; i++) {
+          ctx.fillStyle = "rgb(0, 0, 0)";
+          ctx.strokeText(segment.lines[i], subtitlePosX + subtitleWidth / 2, newSubtitlePosY + subtitleHeight / 2);
+          ctx.fillStyle = "rgb(255, 255, 255)";
+          ctx.fillText(segment.lines[i], subtitlePosX + subtitleWidth / 2, newSubtitlePosY + subtitleHeight / 2);
+          newSubtitlePosY += subtitleLineHeight;
+        }
+      }
+
+      // animation loop
+      const animate = (timestamp) => {
+        if (state === STATE.READY_TO_PLAY_VIDEOS) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < segments.length; i++) {
+            if (segments[i].type === "video") {
+              if (segments[i].elem && segments[i].elem.readyState) {
+                drawVideo(segments[i]);
+              }
+              break;
+            }
+          }
+          for (let i = 0; i < segments.length; i++) {
+            if (segments[i].type === "subtitle") {
+              drawSubtitle(segments[i]);
+              break;
+            }
+          }
+        }
+        if (state === STATE.SHOULD_PLAY_VIDEOS) {
+          stopPlayingMedia();
+          segmentIndex = 0;
+          playingIndices = new Set();
+          startTime = timestamp;
+          previousTimestamp = timestamp - (1000 / 60);
+          setState(STATE.PLAYING_VIDEOS);
+        }
+        if (state === STATE.SHOULD_PAUSE_VIDEOS) {
+          pausePlayingMedia();
+          segmentIndex = 0;
+          playingIndices = new Set();
+          setState(STATE.PAUSED_VIDEOS);
+        }
+        if (state === STATE.SHOULD_RESUME_VIDEOS) {
+          setState(STATE.PLAYING_VIDEOS);
+        }
+        if (state === STATE.PLAYING_VIDEOS || state === STATE.PAUSED_VIDEOS) {
+          if (state === STATE.PAUSED_VIDEOS || progress !== previousProgress) {
+            startTime = timestamp - progress * videoLength;
+          }
+          const elapsedTime = timestamp - startTime;
+          progress = Math.min(elapsedTime / videoLength, 1);
+
+          if (!buffering && progress > loadedProgress) {
+            startBuffering();
+          }
+
+          // update progress bar gauge
+          progressGauge.style.width = `${progress * (window.innerWidth - progressBarWidthGap)}px`;
+
+          previousProgress = progress;
+          const frameTime = (timestamp - previousTimestamp) / 1000;
+          previousTimestamp = timestamp;
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // store started segments
+          for (let i = segmentIndex; i < segments.length; i++) {
+            if (segments[i].end <= elapsedTime) { // skip already finished segments
+              continue;
+            }
+            if (segments[i].start <= elapsedTime) {
+              playingIndices.add(i);
+              if (i === segments.length - 1) { // if the last index was added, exit the loop
+                segmentIndex = segments.length;
+              }
+            }
+            else {
+              if (segmentIndex !== i) {
+                segmentIndex = i;
+              }
+              break;
+            }
+          }
+
+          // process stored segments before end
+          for (const index of playingIndices) {
+            const segment = segments[index];
+            if (segment.end > elapsedTime) {
+              switch (segment.type) {
+                case "audio":
+                  if (segment.elem && segment.elem.readyState && segment.elem.paused) {
+                    playMedia(segment, elapsedTime, frameTime);
+                  }
+                  break;
+                case "video":
+                  if (segment.elem && segment.elem.readyState) {
+                    if (segment.elem.paused) {
+                      playMedia(segment, elapsedTime, frameTime);
+                    }
+                    drawVideo(segment);
+                  }
+                  break;
+                case "subtitle":
+                  drawSubtitle(segment);
+                  break;
+                default:
+                  printToConsole("Unknown type");
+                  setState(STATE.ERROR);
+                  return;
+              }
+            }
+            else {
+              if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
+                segment.elem.pause();
+              }
+              playingIndices.delete(index); // remove ended segments
+            }
+          }
+
+          if (!playingIndices.size) {
+            setState(STATE.PLAYED_VIDEOS);
+          }
+        }
+        if (state === STATE.PLAYED_VIDEOS) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = segments.length - 1; i >= 0; i--) {
+            if (segments[i].type === "video") {
+              if (segments[i].elem && segments[i].elem.readyState) {
+                drawVideo(segments[i]);
+              }
+              break;
+            }
+          }
+          for (let i = segments.length - 1; i >= 0; i--) {
+            if (segments[i].type === "subtitle") {
+              drawSubtitle(segments[i]);
+              break;
+            }
+          }
+        }
+        window.requestAnimationFrame(animate);
+      }
+      setState(STATE.LOADED_PAGE);
+
+      const loadMedia = () => {
+        // load audio files
+        setState(STATE.LOADING_AUDIOS);
+        const promises = []; // array to store audio loading promises
+        for (const segment of segments) {
+          if (segment.type === "audio") {
+            promises.push(
+              new Promise((resolve, reject) => {
+                segment.elem.crossOrigin = "anonymous";
+                segment.elem.oncanplaythrough = () => {
+                  segment.elem.oncanplaythrough = null; // prevent from being called again
+                  if ("<%= voice %>" === "off") {
+                    segment.elem.volume = 0;
+                  }
+                  if (segment.end > videoLength) {
+                    videoLength = segment.end;
+                  }
+                  resolve();
+                };
+                segment.elem.onerror = (error) => {
+                  reject(error);
+                };
+                segment.elem.src = segment.url;
+              })
+            );
+          }
+        }
+        Promise.all(promises).then(() => { // called after all audio files are loaded
+          setState(STATE.LOADED_AUDIOS);
+          printToConsole(`Total video duration: ${videoLength / 1000} seconds`);
+
+          const onInitialLoad = () => {
+            const loadingTime = new Date() - pageLoadedTime;
+            printToConsole(`The initial loading took ${loadingTime}ms`);
+            setState(STATE.READY_TO_PLAY_VIDEOS);
+            if (!autoLoad || autoPlay) {
+              setState(STATE.SHOULD_PLAY_VIDEOS);
+            }
+            window.requestAnimationFrame(animate);
+          }
+
+          // load video from text (one by one recursively)
+          const loadVideoFromText = (index, duration) => {
+            let segment = null;
+            for (let i = index; i < segments.length; i++) {
+              if (segments[i].type === "video") {
+                segment = segments[i];
+                index = i;
+                duration += (segment.end - segment.start);
+                break;
+              }
+            }
+            if (segment == null) {
+              printToConsole("Successfully loaded videos");
+              // if it is still loading state, make it ready to play the video
+              if (state === STATE.LOADING_VIDEOS) {
+                onInitialLoad();
+              }
+              return;
+            }
+            const loadVideo = (segment) => {
+              segment.elem.crossOrigin = "anonymous";
+              segment.elem.oncanplay = () => {
+                segment.elem.oncanplay = null; // prevent from being called again
+
+                // calculate xpos, ypos, width, height of the video to fit into the canvas
+                const wrh = segment.elem.videoWidth / segment.elem.videoHeight;
+                let newWidth = canvas.width;
+                let newHeight = newWidth / wrh;
+                if (newHeight > canvas.height) {
+                  newHeight = canvas.height;
+                  newWidth = newHeight * wrh;
+                }
+                segment.xpos = newWidth < canvas.width ? ((canvas.width - newWidth) / 2) : 0;
+                segment.ypos = newHeight < canvas.height ? ((canvas.height - newHeight) / 2) : 0;
+                segment.width = newWidth;
+                segment.height = newHeight;
+                segment.scale = newHeight / segment.elem.videoHeight;
+                segment.elem.currentTime = 0;
+                segment.elem.volume = 0;
+
+                // ready to play the video
+                if (state === STATE.LOADING_VIDEOS && duration >= minDuration) {
+                  onInitialLoad();
+                }
+                videoIds.push(segment.id);
+                if (videoIds.length > maxNumVideoIds) {
+                  for (let i = 0; i < videoIds.length; i++) {
+                    if (!brokenVideoIds.includes(videoIds[i])) {
+                      videoIds.splice(i, 1); // only remove unbroken video ID
+                      break;
+                    }
+                  }
+                }
+                // if it was buffering, release it
+                if (buffering) {
+                  releaseBuffering();
+                }
+                // update progress bar loading
+                loadedProgress = segment.end / videoLength;
+                progressLoading.style.width = `${loadedProgress * (window.innerWidth - progressBarWidthGap)}px`;
+
+                // update project's segments with the segment's index, url and id
+                fetch("/api/v1/project/<%= urlKey %>/segments", {
+                  method: "PUT",
+                  headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                  body: JSON.stringify({ index: index, videoUrl: segment.url, videoId: segment.id })
+                }).then(response => response.json()).then((data) => {
+                  if (data.error) {
+                    alert(data.message);
+                    setState(STATE.ERROR);
+                    return;
+                  }
+                  if (!data.auth) {
+                    alert(data.message);
+                    setState(STATE.ERROR);
+                    return;
+                  }
+                  // call back this function
+                  loadVideoFromText(index + 1, duration);
+                });
+              };
+              segment.elem.onerror = (error) => {
+                printToConsole(`Could not load video from ${segment.url}`);
+                videoIds.push(segment.id);
+                brokenVideoIds.push(segment.id);
+                maxNumVideoIds++;
+                printToConsole("Trying again with other video...");
+                segment.url = "";
+                loadVideoFromText(index, duration - (segment.end - segment.start));
+                return;
+              };
+              printToConsole(`Loading video from ${segment.url}`);
+              segment.elem.src = `${prefixUrl}${segment.url}`;
+            }
+            if (segment.url.length) {
+              loadVideo(segment);
+              return;
+            }
+            fetch("/api/v1/video", {
+              method: "POST",
+              headers: { "Accept": "application/json", "Content-Type": "application/json" },
+              body: JSON.stringify({ text: segment.text, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+            }).then(response => response.json()).then((data) => {
+              if (data.error) {
+                alert(data.message);
+                setState(STATE.ERROR);
+                return;
+              }
+              if (!data.auth) {
+                alert(data.message);
+                setState(STATE.ERROR);
+                return;
+              }
+              const { videoUrl, videoId } = data;
+              segment.url = videoUrl;
+              segment.id = videoId;
+              loadVideo(segment);
+            });
+          }
+          setState(STATE.LOADING_VIDEOS);
+          loadVideoFromText(0, 0);
+        }).catch((error) => {
+          alert(error);
+          setState(STATE.ERROR);
+        });
+      }
+
+      const showShareBackground = () => {
+        shareBackground.style.opacity = 1;
+        shareBackground.style.pointerEvents = "auto";
+      }
+
+      const hideShareBackground = () => {
+        clearSelection();
+        shareBackground.style.opacity = 0;
+        shareBackground.style.pointerEvents = "none";
+        shareWatchCopy.value = "Copy";
+        shareEmbedCopy.value = "Copy";
+      }
+
+      const copyToClipboard = (inputElem) => {
+        inputElem.select();
+        inputElem.setSelectionRange(0, 99999);
+        try { // security exception may be thrown by some browsers.
+          return document.execCommand("copy");
+        }
+        catch (error) {
+          return false;
+        }
+      }
+
+      const clearSelection = () => {
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+        else if (document.selection) {
+          document.selection.empty();
+        }
+      }
+
+      const playPauseResume = () => {
+        if (buffering) {
+          return;
+        }
+        if (state === STATE.READY_TO_LOAD_MEDIA) {
+          loadMedia();
+        }
+        else if (state === STATE.READY_TO_PLAY_VIDEOS || state === STATE.PLAYED_VIDEOS) {
+          setState(STATE.SHOULD_PLAY_VIDEOS);
+        }
+        else if (state === STATE.PLAYING_VIDEOS) {
+          setState(STATE.SHOULD_PAUSE_VIDEOS);
+        }
+        else if (state === STATE.PAUSED_VIDEOS) {
+          setState(STATE.SHOULD_RESUME_VIDEOS);
+        }
+      }
+
+      const moveWhileClicked = (clientX) => {
+        let xpos = clientX; // x position within the viewport
+        const progressBarWidthGapHalf = progressBarWidthGap / 2;
+        // ignore clicking outside the progress bar width
+        if (xpos < progressBarWidthGapHalf || xpos > window.innerWidth - progressBarWidthGapHalf) {
+          return;
+        }
+        xpos -= progressBarWidthGapHalf; // update x position for progress bar
+        // ignore clicking above the loaded progress width 
+        if (xpos > parseFloat(progressLoading.style.width)) {
+          return;
+        }
+        progressGauge.style.width = `${xpos}px`;
+        pausePlayingMedia();
+        progress = Math.min(xpos / (window.innerWidth - progressBarWidthGap), (videoLength - 1) / videoLength);
+        segmentIndex = 0;
+        playingIndices = new Set();
+      }
+
+      const controllerMiddleOnMouseDown = (clientX) => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (controllerMiddleClicked) {
+          return;
+        }
+        moveWhileClicked(clientX);
+        controllerMiddleClickedPreviousState = state;
+        setState(STATE.PAUSED_VIDEOS);
+        controllerMiddleClicked = true;
+      }
+
+      const preventHidingController = () => {
+        cancelHoverTimer();
+        showController();
+      }
+
+      const windowOnMouseMove = (clientX) => {
+        if (!controllerMiddleClicked) {
+          return;
+        }
+        progressBar.style.height = "8px";
+        progressThumb.style.webkitTransform = "scale(1)";
+        progressThumb.style.transform = "scale(1)";
+        moveWhileClicked(clientX);
+      }
+
+      const windowOnMouseUp = () => {
+        if (!controllerMiddleClicked) {
+          return;
+        }
+        progressBar.style.height = "4px";
+        progressThumb.style.webkitTransform = "scale(0)";
+        progressThumb.style.transform = "scale(0)";
+        if (controllerMiddleClickedPreviousState === STATE.PLAYING_VIDEOS) {
+          setState(STATE.SHOULD_RESUME_VIDEOS);
+        }
+        showController();
+        scheduleHideController();
+        controllerMiddleClickedPreviousState = null;
+        controllerMiddleClicked = false;
+      }
+
+      const moveBackward = () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (buffering) {
+          releaseBuffering();
+        }
+        let currentTime = progress * videoLength;
+        let currentIndex = -1;
+        for (let i = segments.length - 1; i >= 0; i--) {
+          if (segments[i].type === "subtitle" && segments[i].start <= currentTime) {
+            currentIndex = i;
+            break;
+          }
+        }
+        if (currentIndex === -1) {
+          return;
+        }
+        const currentSegment = segments[currentIndex];
+        if (currentTime - currentSegment.start > 500) {
+          currentTime = currentSegment.start;
+        }
+        else {
+          let previousIndex = -1;
+          for (let i = currentIndex - 1; i >= 0; i--) {
+            if (segments[i].type === "subtitle" && segments[i].start < currentSegment.start) {
+              previousIndex = i;
+              break;
+            }
+          }
+          if (previousIndex === -1) {
+            currentTime = currentSegment.start;
+          }
+          else {
+            const previousSegment = segments[previousIndex];
+            currentTime = previousSegment.start;
+          }
+        }
+        pausePlayingMedia();
+        progress = currentTime / videoLength;
+        segmentIndex = 0;
+        playingIndices = new Set();
+      }
+
+      const moveForward = () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (buffering) {
+          return;
+        }
+        let currentTime = progress * videoLength;
+        let currentIndex = -1;
+        for (let i = segments.length - 1; i >= 0; i--) {
+          if (segments[i].type === "subtitle" && segments[i].start <= currentTime) {
+            currentIndex = i;
+            break;
+          }
+        }
+        if (currentIndex === -1) {
+          return;
+        }
+        const currentSegment = segments[currentIndex];
+        let nextIndex = -1;
+        for (let i = currentIndex + 1; i < segments.length; i++) {
+          if (segments[i].type === "subtitle" && segments[i].start > currentSegment.start) {
+            nextIndex = i;
+            break;
+          }
+        }
+        if (nextIndex === -1) {
+          currentTime = currentSegment.end - 1;
+        }
+        else {
+          const nextSegment = segments[nextIndex];
+          currentTime = nextSegment.start + 1;
+        }
+        const targetProgress = currentTime / videoLength;
+        if (targetProgress > loadedProgress) {
+          startBuffering();
+          return;
+        }
+        pausePlayingMedia();
+        progress = targetProgress;
+        segmentIndex = 0;
+        playingIndices = new Set();
+      }
+
+      const toggleFullscreen = () => {
+        const fullscreenEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled;
+        const requestFullscreen = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.msRequestFullscreen;
+        const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.mozExitFullScreen || document.msExitFullscreen;
+        if (!fullscreenEnabled || !requestFullscreen || !exitFullscreen) {
+          printToConsole("Fullscreen is not available");
+          return;
+        }
+        const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (!fullscreenElement) {
+          requestFullscreen.call(container);
+          controllerFullscreenIcon.style.display = "none";
+          controllerNormalscreenIcon.style.display = "block";
+          if (isAndroid && screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock("landscape");
+          }
+        }
+        else {
+          exitFullscreen.call(document);
+          controllerFullscreenIcon.style.display = "block";
+          controllerNormalscreenIcon.style.display = "none";
+        }
+      }
+
+      // get segments
+      setState(STATE.GETTING_SEGMENTS);
+      fetch("/api/v1/project/<%= urlKey %>", {
+        method: "GET"
+      }).then(response => response.json()).then((data) => {
+        if (data.error) {
+          alert(data.message);
+          setState(STATE.ERROR);
+          return;
+        }
+        if (!data.auth) {
+          alert(data.message);
+          setState(STATE.ERROR);
+          return;
+        }
+        setState(STATE.GOT_SEGMENTS);
+        segments = data.project.segments;
+        if (!segments.length) {
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
+          container.innerHTML = "<h2>The video no longer exists</h2>";
+          return;
+        }
+
+        // get subtitle lines from text
+        const anySubtitleLineOverflow = (lines) => {
+          for (const line of lines) {
+            if (line.indexOf(" ") !== -1 && ctx.measureText(line).width > subtitleWidth) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        const splitSubtitleLine = (line, numChunks) => {
+          const words = line.split(" ").filter(i => i);
+          let lines = [];
+          for (let i = numChunks; i > 0; i--) {
+            lines.push(words.splice(0, Math.ceil(words.length / i)).join(" "));
+          }
+          return lines;
+        }
+
+        const getSubtitleLines = (line) => {
+          let lines = [line];
+          for (let numChunks = 2; anySubtitleLineOverflow(lines); numChunks++) {
+            lines = splitSubtitleLine(line, numChunks);
+          }
+          return lines;
+        }
+
+        // add media elements and get subtitle lines
+        for (const segment of segments) {
+          if (segment.type === "audio") {
+            segment.elem = new Audio();
+          }
+          else if (segment.type === "video") {
+            segment.elem = document.createElement("VIDEO");
+          }
+          else if (segment.type === "subtitle") {
+            segment.lines = getSubtitleLines(segment.text);
+          }
+        }
+
+        setState(STATE.DRAWING_THUMBNAIL);
+        const loadThumbnail = () => {
+          const thumbnailUrl = `https://i.vimeocdn.com/video/${segment.id}_1920x1080.jpg`;
+          thumbnail.onerror = () => {
+            printToConsole(`Could not load thumbnail from ${thumbnailUrl}`);
+          };
+          thumbnail.src = thumbnailUrl;
+        }
+
+        const onReadyToLoadMedia = () => {
+          if (autoLoad) {
+            if (!autoPlay) {
+              loadThumbnail();
+            }
+            loadMedia();
+          }
+          else {
+            loadThumbnail();
+          }
+        }
+
+        const getFirstVideoSegment = () => {
+          for (const segment of segments) {
+            if (segment.type === "video") {
+              return segment;
+            }
+          }
+        }
+        const segment = getFirstVideoSegment();
+        if (segment.id.length) {
+          setState(STATE.READY_TO_LOAD_MEDIA);
+          onReadyToLoadMedia();
+          return;
+        }
+        fetch("/api/v1/video", {
+          method: "POST",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ text: segment.text, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            setState(STATE.ERROR);
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            setState(STATE.ERROR);
+            return;
+          }
+          const { videoUrl, videoId } = data;
+          segment.url = videoUrl;
+          segment.id = videoId;
+          setState(STATE.READY_TO_LOAD_MEDIA);
+          onReadyToLoadMedia();
+        });
+      });
+
+      // add event listeners
+      controller.addEventListener("mouseleave", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (shareBackground.style.pointerEvents !== "none") {
+          return;
+        }
+        if (controllerMiddleClicked) {
+          return;
+        }
+        if (buffering) {
+          return;
+        }
+        controller.style.opacity = 0;
+      });
+
+      controllerTop.addEventListener("mousemove", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        showController();
+        scheduleHideController();
+      });
+
+      controllerTop.addEventListener("mouseup", () => {
+        if (shareBackground.style.pointerEvents !== "none") {
+          hideShareBackground();
+          return;
+        }
+        if (controllerTopMouseUpTimer) {
+          window.clearTimeout(controllerTopMouseUpTimer);
+          controllerTopMouseUpTimer = null;
+          toggleFullscreen();
+          return;
+        }
+        controllerTopMouseUpTimer = window.setTimeout(() => {
+          playPauseResume();
+          controllerTopMouseUpTimer = null;
+        }, 250);
+      });
+
+      viviifyText.addEventListener("mouseup", (event) => {
+        event.stopPropagation();
+        window.open("/watch/<%= urlKey %>");
+      });
+
+      shareBackground.addEventListener("mouseup", (event) => {
+        event.stopPropagation();
+      });
+
+      shareWatch.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (copyToClipboard(shareWatchInput)) {
+          shareWatchCopy.value = "Copied";
+          shareEmbedCopy.value = "Copy";
+        }
+      });
+
+      shareEmbed.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (copyToClipboard(shareEmbedInput)) {
+          shareWatchCopy.value = "Copy";
+          shareEmbedCopy.value = "Copied";
+        }
+      });
+
+      controllerMiddle.addEventListener("touchstart", (event) => {
+        controllerMiddleOnMouseDown(event.touches[0].clientX);
+        event.preventDefault();
+      });
+
+      controllerMiddle.addEventListener("mousedown", (event) => {
+        controllerMiddleOnMouseDown(event.clientX);
+      });
+
+      controllerMiddle.addEventListener("mousemove", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (controllerMiddleClicked) {
+          return;
+        }
+        preventHidingController();
+      });
+
+      window.addEventListener("touchmove", (event) => {
+        windowOnMouseMove(event.touches[0].clientX);
+      });
+
+      window.addEventListener("mousemove", (event) => {
+        windowOnMouseMove(event.clientX);
+      });
+
+      window.addEventListener("touchend", (event) => {
+        windowOnMouseUp();
+      });
+
+      window.addEventListener("mouseup", () => {
+        windowOnMouseUp();
+      });
+
+      window.addEventListener("resize", (event) => {
+        progressLoading.style.width = `${loadedProgress * (window.innerWidth - progressBarWidthGap)}px`;
+        progressGauge.style.width = `${progress * (window.innerWidth - progressBarWidthGap)}px`;
+      });
+
+      controllerBottom.addEventListener("mousemove", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        preventHidingController();
+      });
+
+      controllerPlay.addEventListener("mouseup", () => {
+        playPauseResume();
+        showController();
+        scheduleHideController();
+      });
+
+      controllerBackward.addEventListener("mouseup", () => {
+        moveBackward();
+      });
+
+      controllerForward.addEventListener("mouseup", () => {
+        moveForward();
+      });
+
+      controllerShare.addEventListener("mouseup", () => {
+        if (shareBackground.style.pointerEvents === "none") {
+          showShareBackground();
+        }
+        else {
+          hideShareBackground();
+        }
+      });
+
+      controllerFullscreen.addEventListener("mouseup", () => {
+        toggleFullscreen();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        switch (event.key.toLowerCase()) {
+          case " ":
+            playPauseResume();
+            break;
+          case "arrowleft":
+            moveBackward();
+            break;
+          case "arrowright":
+            moveForward();
+            break;
+          case "arrowup":
+            break;
+          case "arrowdown":
+            break;
+          case "f":
+            toggleFullscreen();
+            break;
+        }
+      });
+
+      // pause the playing video if the page becomes inactive
+      document.addEventListener("visibilitychange", () => {
+        if (state === STATE.PLAYING_VIDEOS) {
+          pausePlayingMedia();
+          setState(STATE.SHOULD_PAUSE_VIDEOS);
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

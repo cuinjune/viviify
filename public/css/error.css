@@ -1,0 +1,84 @@
+/* ==================== container ==================== */
+
+#container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  background-color: rgb(246, 246, 246);
+}
+
+/* ==================== header ==================== */
+
+#header {
+  position: fixed;
+  top: 0px;
+  width: 100%;
+  height: 65px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgb(83, 117, 226);
+  z-index: 1;
+}
+
+#header-left {
+  margin-left: calc(65px / 3);
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-item {
+  text-decoration: none;
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+}
+
+/* ==================== main ==================== */
+
+#main {
+  margin-top: 65px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  background-color: rgb(246, 246, 246);
+}
+
+#main-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: rgb(68, 68, 68);
+}
+
+#main-status {
+  width: 100%;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 72px;
+}
+
+#main-message {
+  width: 100%;
+  height: 75px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 24px;
+}

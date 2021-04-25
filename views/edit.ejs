@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Edit | viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=0.75" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/edit.css" />
+</head>
+
+<body>
+  <div id="container">
+    <header id="header">
+      <div id="header-left">
+        <div id="header-logo">
+          <h2><a href="/" class="header-item">viviify</a></h2>
+        </div>
+      </div>
+      <div id="header-right">
+        <div id="header-logout">
+          <h4><a class="header-item">Log out</a></h4>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <div id="main-editor">
+        <form id="main-form">
+          <div id="main-form-top">
+            <div id="main-form-voice" class="main-form-sel-elem">
+              <label for="voice" class="main-form-sel-label">Voice</label>
+              <select id="main-form-sel-voice" class="main-form-sel-item" name="voice" form="main-form">
+                <% var options=["off", "joanna" , "salli" , "ivy" , "matthew" , "joey" , "justin" ]; %>
+                  <% for(const option of options) { %>
+                    <% const selected=option===voice ? "selected" : "" ; %>
+                      <option value="<%= option %>" <%=selected %>><%= option[0].toUpperCase() + option.slice(1); %>
+                      </option>
+                      <% } %>
+              </select>
+            </div>
+            <div id="main-form-speed" class="main-form-sel-elem">
+              <label for="speed" class="main-form-sel-label">Speed</label>
+              <select id="main-form-sel-speed" class="main-form-sel-item" name="speed" form="main-form">
+                <% var options=["slower", "slow" , "medium" , "fast" , "faster" ]; %>
+                  <% for(const option of options) { %>
+                    <% const selected=option===speed ? "selected" : "" ; %>
+                      <option value="<%= option %>" <%=selected %>><%= option[0].toUpperCase() + option.slice(1); %>
+                      </option>
+                      <% } %>
+              </select>
+            </div>
+            <div id="main-form-subtitle" class="main-form-sel-elem">
+              <label for="subtitle" class="main-form-sel-label">Subtitle</label>
+              <select id="main-form-sel-subtitle" class="main-form-sel-item" name="subtitle" form="main-form">
+                <% var options=["off", "tiny" , "small" , "medium" , "large" , "huge" ]; %>
+                  <% for(const option of options) { %>
+                    <% const selected=option===subtitle ? "selected" : "" ; %>
+                      <option value="<%= option %>" <%=selected %>><%= option[0].toUpperCase() + option.slice(1); %>
+                      </option>
+                      <% } %>
+              </select>
+            </div>
+            <div id="main-form-viviify" class="main-form-sel-elem">
+              <label for="viviify" class="main-form-sel-label">Viviify</label>
+              <button id="main-form-button-viviify" class="main-form-sel-item">
+                <img id="main-form-play-icon" src="/asset/play.svg" alt="Play">
+              </button>
+            </div>
+          </div>
+          <div id="main-form-middle">
+            <textarea id="main-form-textarea" maxlength="12000"
+              placeholder="Type or paste your text here."><%= text %></textarea>
+          </div>
+          <div id="main-form-bottom">
+            <p id="main-form-textarea-chars">
+              <%= text.length %> characters used
+            </p>
+            <p id="main-form-textarea-saved"></p>
+            <h3 id="main-form-textarea-clear">Clear text</h3>
+          </div>
+        </form>
+        <div id="main-video" style="pointer-events: none; opacity: 0;">
+          <iframe id="main-video-iframe" src="" frameborder="0" allow="autoplay;" allowfullscreen></iframe>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const logout = document.getElementById("header-logout");
+      const form = document.getElementById("main-form");
+      const voice = document.getElementById("main-form-sel-voice");
+      const speed = document.getElementById("main-form-sel-speed");
+      const subtitle = document.getElementById("main-form-sel-subtitle");
+      const viviify = document.getElementById("main-form-button-viviify");
+      const playIcon = document.getElementById("main-form-play-icon");
+      const textArea = document.getElementById("main-form-textarea");
+      const charsUsed = document.getElementById("main-form-textarea-chars");
+      const saved = document.getElementById("main-form-textarea-saved");
+      const clearText = document.getElementById("main-form-textarea-clear");
+      const video = document.getElementById("main-video");
+      const iframe = document.getElementById("main-video-iframe");
+
+      logout.addEventListener("click", () => {
+        fetch("/api/v1/user/logout", {
+          method: "GET"
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          window.location.href = "/";
+        });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+      });
+
+      const isSaveable = () => {
+        if (saved.innerText.length) {
+          return false;
+        }
+        textArea.value = textArea.value.trim();
+        if (/[[\]]/.test(textArea.value)) {
+          const result = confirm("Square brackets cannot be used.\nDo you want to remove them including the text inside?");
+          if (!result) {
+            return false;
+          }
+          // remove all square brackets including the text inside
+          textArea.value = textArea.value.replace(/(\[.*?\])/g, "").replace(/[[\]]/g, "").trim();
+        }
+        if (/[{}]/.test(textArea.value)) {
+          const result = confirm("Curly brackets cannot be used.\nDo you want to remove them including the text inside?");
+          if (!result) {
+            return false;
+          }
+          // remove all curly brackets including the text inside
+          textArea.value = textArea.value.replace(/({.*?})/g, "").replace(/[{}]/g, "").trim();
+        }
+        if (/[<>]/.test(textArea.value)) {
+          const result = confirm("Angle brackets cannot be used.\nDo you want to remove them including the text inside?");
+          if (!result) {
+            return false;
+          }
+          // remove all angle brackets including the text inside
+          textArea.value = textArea.value.replace(/(<.*?>)/g, "").replace(/[<>]/g, "").trim();
+        }
+        if (/[^\x00-\x7F]/.test(textArea.value)) {
+          const result = confirm("Non-ascii characters cannot be used.\nDo you want to remove them?");
+          if (!result) {
+            return false;
+          }
+          // replace all non-ascii characters to space
+          textArea.value = textArea.value.replace(/[^\x00-\x7F]/g, " ").trim();
+        }
+        saved.innerText = "Saving...";
+        return true;
+      }
+
+      const showSaved = () => {
+        saved.innerText = "Saved";
+        window.setTimeout(() => {
+          saved.innerText = "";
+        }, 1000);
+      }
+
+      const saveProject = () => {
+        return fetch("/api/v1/project/<%= urlKey  %>", {
+          method: "PUT",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ text: textArea.value, voice: voice.value, speed: speed.value, subtitle: subtitle.value })
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            return Promise.reject(data.message);
+          }
+          if (!data.auth) {
+            return Promise.reject(data.message);
+          }
+          return Promise.resolve(data.message);
+        });
+      }
+
+      viviify.addEventListener("click", () => {
+        if (!isSaveable()) {
+          return;
+        }
+        saveProject().then((response) => {
+          showSaved();
+          video.style.opacity = 1;
+          video.style.pointerEvents = "auto";
+          iframe.contentWindow.location.replace("/embed/<%= urlKey  %>?autoplay=1");
+          iframe.focus(); // put focus on iframe so we can use its short cuts
+        }).catch((error) => {
+          saved.innerText = "";
+          alert(error.message);
+        });
+      });
+
+      video.addEventListener("click", () => {
+        video.style.opacity = 0;
+        video.style.pointerEvents = "none";
+      });
+
+      video.addEventListener("transitionend", () => {
+        if (parseInt(video.style.opacity, 10) === 0) {
+          iframe.contentWindow.location.replace("");
+        }
+      });
+
+      const updateCharsUsed = () => {
+        charsUsed.innerText = `${textArea.value.length} characters used`;
+        const maxNumCharacters = "<%= role %>" === "basic" ? 3000 : 12000;
+        charsUsed.style.color = textArea.value.length <= maxNumCharacters ? "rgb(125, 125, 125)" : "rgb(226, 83, 79)";
+        if (textArea.value.length) {
+          viviify.style.backgroundColor = "rgb(49, 243, 202)";
+          viviify.style.pointerEvents = "auto";
+          clearText.style.color = "rgb(112, 146, 255)";
+          clearText.style.pointerEvents = "auto";
+        }
+        else {
+          viviify.style.backgroundColor = "rgb(175, 175, 175)";
+          viviify.style.pointerEvents = "none";
+          clearText.style.color = "rgb(175, 175, 175)";
+          clearText.style.pointerEvents = "none";
+        }
+      }
+      updateCharsUsed();
+
+      textArea.addEventListener("input", () => {
+        updateCharsUsed();
+      });
+
+      clearText.addEventListener("click", () => {
+        textArea.value = "";
+        updateCharsUsed();
+      });
+
+      // when the user pressed save shortcut
+      document.addEventListener("keydown", (event) => {
+        if (event.keyCode == 83 && (navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey)) {
+          event.preventDefault();
+          if (!isSaveable()) {
+            return;
+          }
+          saveProject().then((response) => {
+            showSaved();
+          }).catch((error) => {
+            saved.innerText = "";
+            alert(error.message);
+          });
+        }
+      });
+    });
+  </script>
+
+</body>
+
+</html>

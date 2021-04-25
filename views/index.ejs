@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=0.75" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/index.css" />
+  <script>window.noZensmooth = true;</script>
+  <script src="/js/libs/zenscroll-min.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <header id="header">
+      <div id="header-left">
+        <div id="header-logo">
+          <h2><a class="header-item">viviify</a></h2>
+        </div>
+      </div>
+      <div id="header-right">
+        <div id="header-howitworks">
+          <h4><a class="header-item">How it works</a></h4>
+        </div>
+        <div id="header-login">
+          <h4><a href="/login" class="header-item">Log in</a></h4>
+        </div>
+        <div id="header-signup">
+          <h4><a href="/signup" class="header-item">Sign up</a></h4>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <div id="main-headline">
+        <h1>Headline</h1>
+      </div>
+      <div id="main-howitworks">
+        <h1>How it works</h1>
+      </div>
+    </main>
+    <footer id="footer">
+      <div id="footer-left">
+        <div id="footer-copyright">
+          <h5>© 2021 viviify. All rights reserved.</h5>
+        </div>
+      </div>
+      <div id="footer-right">
+        <div id="footer-email">
+          <h5><a href="mailto:support@viviify.com" class="footer-item">support@viviify.com</a></h5>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const logo = document.getElementById("header-logo");
+      const howitworks = document.getElementById("header-howitworks");
+
+      logo.addEventListener("click", () => {
+        zenscroll.toY(0);
+      });
+
+      howitworks.addEventListener("click", () => {
+        zenscroll.to(document.getElementById('main-howitworks'));
+      });
+    });
+  </script>
+
+</body>
+
+</html>

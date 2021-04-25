@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Update name | viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=0.75" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/name.css" />
+</head>
+
+<body>
+  <div id="container">
+    <header id="header">
+      <div id="header-left">
+        <div id="header-logo">
+          <h2><a href="/" class="header-item">viviify</a></h2>
+        </div>
+      </div>
+      <div id="header-right">
+        <div id="header-logout">
+          <h4><a class="header-item">Log out</a></h4>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <div id="main-name">
+        <form id="main-form">
+          <div id="main-form-top">
+            <h2>Update name</h2>
+          </div>
+          <div id="main-form-middle">
+            <input id="main-form-name" class="main-form-item main-form-text" type="text" name="name" pattern=".*\S+.*"
+              required title="This field is required" placeholder="Name" required="" spellcheck="false" autofocus
+              value="<%= name %>" onfocus="const temp_value=this.value; this.value=''; this.value=temp_value;">
+          </div>
+          <div id="main-form-bottom">
+            <input id="main-form-update" class="main-form-item" type="submit" value="Update">
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const logout = document.getElementById("header-logout");
+      const form = document.getElementById("main-form");
+      const name = document.getElementById("main-form-name");
+
+      logout.addEventListener("click", () => {
+        fetch("/api/v1/user/logout", {
+          method: "GET"
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          window.location.href = "/";
+        });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        fetch("/api/v1/user/name", {
+          method: "PUT",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.value })
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            return;
+          }
+          alert(data.message);
+          window.location.href = "/account";
+        });
+      });
+    });
+  </script>
+
+</body>
+
+</html>

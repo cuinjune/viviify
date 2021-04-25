@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Account | viviify</title>
+  <meta charset=utf-8 />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="viewport"
+    content="user-scalable=no, width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=0.75" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/account.css" />
+</head>
+
+<body>
+  <div id="container">
+    <header id="header">
+      <div id="header-left">
+        <div id="header-logo">
+          <h2><a href="/" class="header-item">viviify</a></h2>
+        </div>
+      </div>
+      <div id="header-right">
+        <div id="header-logout">
+          <h4><a class="header-item">Log out</a></h4>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <div id="main-account">
+        <form id="main-form">
+          <div id="main-form-top">
+            <h2>Profile</h2>
+          </div>
+          <div id="main-form-middle">
+            <div id="main-form-email">
+              <h3>Email</h3>
+              <p>
+                <%= email %>
+              </p>
+            </div>
+            <div id="main-form-name">
+              <h3>Name</h3>
+              <p>
+                <%= name %>
+              </p>
+            </div>
+          </div>
+          <div id="main-form-bottom">
+            <input id="main-form-update-password" class="main-form-item" type="submit" value="Update password">
+            <input id="main-form-update-name" class="main-form-item" type="submit" value="Update name">
+            <input id="main-form-delete-account" class="main-form-item" type="submit" value="Delete account">
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+
+    window.addEventListener("load", () => {
+      const logout = document.getElementById("header-logout");
+      const form = document.getElementById("main-form");
+      const updatePassword = document.getElementById("main-form-update-password");
+      const updateName = document.getElementById("main-form-update-name");
+      const deleteAccount = document.getElementById("main-form-delete-account");
+
+      logout.addEventListener("click", () => {
+        fetch("/api/v1/user/logout", {
+          method: "GET"
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.location.href = "/";
+            return;
+          }
+          window.location.href = "/";
+        });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+      });
+
+      updatePassword.addEventListener("click", () => {
+        window.location.href = "/password";
+      });
+
+      updateName.addEventListener("click", () => {
+        window.location.href = "/name";
+      });
+
+      deleteAccount.addEventListener("click", () => {
+        window.location.href = "/delete";
+      });
+    });
+  </script>
+
+</body>
+
+</html>
