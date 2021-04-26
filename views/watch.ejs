@@ -39,7 +39,6 @@
         autoplay: !urlParams.has("autoplay") ? autoPlayDefault : urlParams.get("autoplay") === "1" ? 1 : 0
       };
       const searchParams = new URLSearchParams(queries);
-      console.log(`/embed/<%= urlKey  %>?${searchParams.toString()}`);
       iframe.contentWindow.location.replace(`/embed/<%= urlKey  %>?${searchParams.toString()}`);
       iframe.focus(); // put focus on iframe so we can use its short cuts
     });
