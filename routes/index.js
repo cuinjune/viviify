@@ -384,9 +384,7 @@ router.post("/api/v1/user/signup", (req, res) => {
       }
       const role = email === "admin@viviify.com" && secret === config.SECRET ? "admin" : "basic";
       const signupDate = new Date().toISOString();
-      console.log("IP:", req.clientIp);
       const geo = geoip.lookup(req.clientIp);
-      console.log("GEO:", geo);
       const country = geo ? geo.country : "unknown";
       const region = geo ? geo.region : "unknown";
       const city = geo ? geo.city : "unknown";
