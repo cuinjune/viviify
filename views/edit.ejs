@@ -205,7 +205,7 @@
           iframe.focus(); // put focus on iframe so we can use its short cuts
         }).catch((error) => {
           saved.innerText = "";
-          alert(error.message);
+          alert(error.message || error);
         });
       });
 
@@ -259,7 +259,7 @@
             showSaved();
           }).catch((error) => {
             saved.innerText = "";
-            alert(error.message);
+            alert(error.message || error);
           });
         }
       });

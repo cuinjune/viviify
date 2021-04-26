@@ -9,6 +9,25 @@ const User = require("./../models/user");
 const Project = require("./../models/project");
 const config = require("./../config/config");
 const { auth } = require("./../middlewares/auth");
+const { RateLimiterMemory } = require("rate-limiter-flexible");
+
+// rate limiter for basic users (max 50 requests per hour)
+const rateLimiterBasic = new RateLimiterMemory(
+  {
+    points: 50,
+    duration: 60 * 60,
+    blockDuration: 60 * 60
+  }
+);
+
+// rate limiter for premium and admin users (max 100 requests per hour)
+const rateLimiterPremium = new RateLimiterMemory(
+  {
+    points: 100,
+    duration: 60 * 60,
+    blockDuration: 60 * 60
+  }
+);
 
 // views
 router.get("/", auth, (req, res) => {
@@ -146,7 +165,7 @@ router.get("/api/v1/projects", auth, (req, res) => {
 router.post("/api/v1/project", auth, (req, res) => {
   const maxNumProjects = req.user.role === "basic" ? 10 : 100;
   if (req.user.projects.length === maxNumProjects) {
-    return res.status(400).json({ auth: false, message: `You have reached the maximum number of projects (${maxNumProjects}) allowed` });
+    return res.status(400).json({ auth: false, message: `You have reached the maximum number of projects allowed (${maxNumProjects}) for your account` });
   }
   const generateUrlKey = () => {
     const urlKey = short.generate().substr(0, 11);
@@ -221,7 +240,7 @@ router.put("/api/v1/project/:urlKey", auth, (req, res) => {
       const newText = Project.getValidText(text);
       const maxNumCharacters = req.user.role === "basic" ? 3000 : 12000;
       if (newText.length > maxNumCharacters) {
-        return res.status(400).json({ auth: false, message: `You have exceeded the maximum number of characters (${maxNumCharacters}) allowed` });
+        return res.status(400).json({ auth: false, message: `You have exceeded the maximum number of characters allowed (${maxNumCharacters}) for your account` });
       }
       if (!Project.validateText(newText)) {
         return res.status(400).json({ auth: false, message: "Invalid input text" });
@@ -246,26 +265,33 @@ router.put("/api/v1/project/:urlKey", auth, (req, res) => {
       }
       updatedData.subtitle = subtitle;
     }
-    updatedData.lastModifiedDate = new Date().toISOString();
-    project.getSegments(updatedData, (err, data, shouldUpdate) => {
-      if (err) {
-        return res.status(400).json({ error: true, message: err });
-      }
-      if (!shouldUpdate) {
-        return res.status(200).json({
-          auth: true,
-          message: "No update was made to the project"
-        });
-      }
-      Project.findOneAndUpdate({ urlKey: req.params.urlKey }, data, { new: true }, (err, project) => {
+    if (updatedData.text === project.text && updatedData.voice === project.voice && updatedData.speed === project.speed && updatedData.subtitle === project.subtitle) {
+      return res.status(200).json({
+        auth: true,
+        message: "No update was made to the project"
+      });
+    }
+    const rateLimiter = req.user.role === "basic" ? rateLimiterBasic : rateLimiterPremium;
+    rateLimiter.consume(req.user._id).then(() => {
+      updatedData.lastModifiedDate = new Date().toISOString();
+      project.getSegments(updatedData, (err, data) => {
         if (err) {
           return res.status(400).json({ error: true, message: err });
         }
-        return res.status(200).json({
-          auth: true,
-          message: "Successfully updated the project"
+        Project.findOneAndUpdate({ urlKey: req.params.urlKey }, data, { new: true }, (err, project) => {
+          if (err) {
+            return res.status(400).json({ error: true, message: err });
+          }
+          return res.status(200).json({
+            auth: true,
+            message: "Successfully updated the project"
+          });
         });
       });
+    }).catch((rejRes) => {
+      const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
+      res.set("Retry-After", String(secs));
+      return res.status(429).json({ auth: false, message: `You have reached the limit of requests allowed (${rateLimiter.points} / hour) for your account` });
     });
   });
 });

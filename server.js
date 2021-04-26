@@ -8,6 +8,29 @@ const path = require("path");
 const config = require("./config/config");
 const index = require("./routes/index");
 const app = express();
+const { RateLimiterMemory } = require("rate-limiter-flexible");
+
+// rate limiter middleware (max 10 requests per second)
+const rateLimiter = new RateLimiterMemory(
+    {
+        points: 10,
+        duration: 1,
+        blockDuration: 60
+    }
+);
+const rateLimiterMiddleware = (req, res, next) => {
+    rateLimiter.consume(req.clientIp).then(() => {
+        next();
+    }).catch((rejRes) => {
+        const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
+        res.set("Retry-After", String(secs));
+        const message = `Too many requests made, please retry after ${secs} seconds`;
+        if (req.originalUrl.startsWith("/api/")) {
+            return res.status(429).json({ error: true, message });
+        }
+        return res.render("error.ejs", { status: 429, message });
+    });
+};
 
 // database connection
 mongoose.Promise = global.Promise;
@@ -56,6 +79,9 @@ app.use((req, res, next) => {
     req.clientIp = req.clientIp.replace(/^.*:/, ""); // strip the IPv6 prefix to make it IPv4
     next();
 });
+
+// set rate limiter
+app.use(rateLimiterMiddleware);
 
 // use the router
 app.use("/", index);

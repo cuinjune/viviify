@@ -60,10 +60,7 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
   const project = this;
   if (!updatedData.text.length) {
     updatedData.segments = [];
-    return cb(null, updatedData, true);
-  }
-  if (updatedData.text === project.text && updatedData.voice === project.voice && updatedData.speed === project.speed && updatedData.subtitle === project.subtitle) {
-    return cb(null, updatedData, false);
+    return cb(null, updatedData);
   }
 
   const polly = new AWS.Polly({
@@ -271,7 +268,7 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
                 }
                 previousVideoLength += videoLength;
                 if (index + 1 === splittedTexts.length) {
-                  return cb(null, updatedData, true);
+                  return cb(null, updatedData);
                 }
                 requestToPolly(index + 1);
               });
