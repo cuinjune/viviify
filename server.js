@@ -26,6 +26,9 @@ const viewsPath = path.join(__dirname, "views");
 app.set("views", viewsPath);
 app.set("view engine", "ejs");
 
+// this has to do with "proxy_set_header X-Forwarded-For $remote_addr;" in nginx config file (/etc/nginx/sites-available/default)
+app.set("trust proxy", true);
+
 // handle data in a nice way
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
