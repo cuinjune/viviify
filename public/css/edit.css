@@ -268,6 +268,7 @@
   user-select: none;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   -webkit-tap-highlight-color: transparent;
+  background-color: rgb(0, 0, 0);
 }
 
 @media screen and (max-width: 2560px) {

@@ -25,9 +25,6 @@
         </div>
       </div>
       <div id="header-right">
-        <div id="header-howitworks">
-          <h4><a class="header-item">How it works</a></h4>
-        </div>
         <div id="header-login">
           <h4><a href="/login" class="header-item">Log in</a></h4>
         </div>
@@ -38,10 +35,9 @@
     </header>
     <main id="main">
       <div id="main-headline">
-        <h1>Headline</h1>
-      </div>
-      <div id="main-howitworks">
-        <h1>How it works</h1>
+        <h1 id="main-text">Convert text to video for more engaging learning experience</h1>
+        <iframe id="main-video-iframe" src="" frameborder="0" allow="autoplay;" allowfullscreen></iframe>
+        <button id="main-get-started">Get Started</button>
       </div>
     </main>
     <footer id="footer">
@@ -61,18 +57,18 @@
   <script>
     window.addEventListener("load", () => {
       const logo = document.getElementById("header-logo");
-      const howitworks = document.getElementById("header-howitworks");
-
       logo.addEventListener("click", () => {
         zenscroll.toY(0);
       });
-
-      howitworks.addEventListener("click", () => {
-        zenscroll.to(document.getElementById("main-howitworks"));
+      const iframe = document.getElementById("main-video-iframe");
+      iframe.contentWindow.location.replace("/embed/cf5f5idgX7f");
+      iframe.focus(); // put focus on iframe so we can use its short cuts
+      const getStarted = document.getElementById("main-get-started");
+      getStarted.addEventListener("click", () => {
+        window.location.href = "/signup";
       });
     });
   </script>
-
 </body>
 
 </html>
