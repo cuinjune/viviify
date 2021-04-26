@@ -23,13 +23,25 @@
       </div>
     </header>
     <main id="main">
-      <iframe id="main-video-iframe" src="/embed/<%= urlKey  %>" frameborder="0" allow="autoplay;"
+      <iframe id="main-video-iframe" src="" frameborder="0" allow="autoplay;"
         allowfullscreen></iframe>
     </main>
   </div>
 
   <script>
     window.addEventListener("load", () => {
+      const iframe = document.getElementById("main-video-iframe");
+      const urlParams = new URLSearchParams(window.location.search);
+      const autoLoadDefault = 1;
+      const autoPlayDefault = 0;
+      const queries = {
+        autoload: !urlParams.has("autoload") ? autoLoadDefault : urlParams.get("autoload") === "1" ? 1 : 0,
+        autoplay: !urlParams.has("autoplay") ? autoPlayDefault : urlParams.get("autoplay") === "1" ? 1 : 0
+      };
+      const searchParams = new URLSearchParams(queries);
+      console.log(`/embed/<%= urlKey  %>?${searchParams.toString()}`);
+      iframe.contentWindow.location.replace(`/embed/<%= urlKey  %>?${searchParams.toString()}`);
+      iframe.focus(); // put focus on iframe so we can use its short cuts
     });
   </script>
 

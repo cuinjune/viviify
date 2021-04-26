@@ -157,12 +157,14 @@
         }
       }
       const debugMode = false; // set debug mode
-      const isSafari = window.safari !== undefined;
+      const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
       const isIOS = ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
       const isAndroid = /(android)/i.test(navigator.userAgent);
       const urlParams = new URLSearchParams(window.location.search);
-      const autoLoad = (isSafari || isIOS) ? false : !urlParams.has("autoload") ? true : urlParams.get("autoload") === "1" ? true : false; // can be enabled by adding "?autoload=1" after the URL (disabled in Safari and iOS)
-      const autoPlay = urlParams.has("autoplay") && urlParams.get("autoplay") === "1" ? true : false; // can be enabled by adding "?autoplay=1" after the URL
+      const autoLoadDefault = true;
+      const autoPlayDefault = false;
+      const autoLoad = (isSafari || isIOS) ? false : !urlParams.has("autoload") ? autoLoadDefault : urlParams.get("autoload") === "1" ? true : false; // can be enabled by adding "?autoload=1" after the URL (disabled in Safari and iOS)
+      const autoPlay = (!autoLoad || !urlParams.has("autoplay")) ? autoPlayDefault : urlParams.get("autoplay") === "1" ? true : false; // can be enabled by adding "?autoplay=1" after the URL
       const pageLoadedTime = new Date();
       const ctx = canvas.getContext("2d");
       canvas.width = 1920;
