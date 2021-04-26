@@ -1,7 +1,8 @@
 const express = require("express");
-const bodyparser = require("body-parser");
 const requestIp = require("request-ip");
+const bodyparser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const favicon = require("serve-favicon");
 const mongoose = require("mongoose");
 const path = require("path");
 const config = require("./config/config");
@@ -34,6 +35,7 @@ app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
 app.use(requestIp.mw()); // for getting req.clientIp
 app.use(cookieParser());
+app.use(favicon(path.join(`${publicPath}/asset/favicon`, "favicon.ico")));
 
 // set your static server
 app.use(express.static(publicPath));
