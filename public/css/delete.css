@@ -143,6 +143,7 @@
   border: 0;
   background: rgb(253, 102, 49);
   cursor: pointer;
+  -webkit-appearance: none;
 }
 
 #main-form-delete:hover {

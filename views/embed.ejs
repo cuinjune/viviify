@@ -160,7 +160,7 @@
       const isIOS = ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
       const isAndroid = /(android)/i.test(navigator.userAgent);
       const urlParams = new URLSearchParams(window.location.search);
-      const autoLoad = isIOS ? false : true; // should always be false on iOS to prevent autoplay
+      const autoLoad = isIOS ? false : urlParams.get("autoload") === "1" ? true : false; // should always be false on iOS to prevent autoplay
       const autoPlay = urlParams.get("autoplay") === "1" ? true : false; // can be enabled by adding "?autoplay=1" after the URL
       const pageLoadedTime = new Date();
       const ctx = canvas.getContext("2d");

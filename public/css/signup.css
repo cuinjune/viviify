@@ -134,6 +134,7 @@
   border: 0;
   background: rgb(49, 202, 253);
   cursor: pointer;
+  -webkit-appearance: none;
 }
 
 #main-form-signup:hover {

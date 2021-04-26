@@ -199,6 +199,7 @@
 
 #share-watch-copy {
   background: rgb(49, 243, 202);
+  -webkit-appearance: none;
 }
 
 #share-watch-copy:hover {
@@ -211,6 +212,7 @@
 
 #share-embed-copy {
   background: rgb(49, 202, 253);
+  -webkit-appearance: none;
 }
 
 #share-embed-copy:hover {

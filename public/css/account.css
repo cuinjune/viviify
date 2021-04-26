@@ -130,6 +130,7 @@
   border: 0;
   background: rgb(49, 202, 253);
   cursor: pointer;
+  -webkit-appearance: none;
 }
 
 #main-form-update-password:hover {
@@ -144,6 +145,7 @@
   border: 0;
   background: rgb(49, 243, 202);
   cursor: pointer;
+  -webkit-appearance: none;
 }
 
 #main-form-update-name:hover {
@@ -158,6 +160,7 @@
   border: 0;
   background: rgb(253, 102, 49);
   cursor: pointer;
+  -webkit-appearance: none;
 }
 
 #main-form-delete-account:hover {
