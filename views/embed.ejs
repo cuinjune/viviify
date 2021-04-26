@@ -983,11 +983,7 @@
         const requestFullscreen = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.msRequestFullscreen;
         const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.mozExitFullScreen || document.msExitFullscreen;
         if (!fullscreenEnabled || !requestFullscreen || !exitFullscreen) {
-          if (isIOS) {
-            alert("Fullscreen is not supported on iOS devices");
-            return;
-          }
-          alert("Fullscreen is not available on this device");
+          alert("Fullscreen is not available in this browser");
           return;
         }
         const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
@@ -995,7 +991,7 @@
           requestFullscreen.call(container);
           controllerFullscreenIcon.style.display = "none";
           controllerNormalscreenIcon.style.display = "block";
-          if (isAndroid && screen.orientation && screen.orientation.lock) {
+          if ((isIOS || isAndroid) && screen.orientation && screen.orientation.lock) {
             screen.orientation.lock("landscape");
           }
         }
