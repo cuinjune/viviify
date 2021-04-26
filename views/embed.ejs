@@ -156,7 +156,7 @@
           default: return 0.25;
         }
       }
-      const debugMode = true; // set debug mode
+      const debugMode = false; // set debug mode
       const isIOS = ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
       const isAndroid = /(android)/i.test(navigator.userAgent);
       const urlParams = new URLSearchParams(window.location.search);
@@ -565,6 +565,47 @@
       setState(STATE.LOADED_PAGE);
 
       const loadMedia = () => {
+
+        // get subtitle lines from text
+        const anySubtitleLineOverflow = (lines) => {
+          for (const line of lines) {
+            if (line.indexOf(" ") !== -1 && ctx.measureText(line).width > subtitleWidth) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        const splitSubtitleLine = (line, numChunks) => {
+          const words = line.split(" ").filter(i => i);
+          let lines = [];
+          for (let i = numChunks; i > 0; i--) {
+            lines.push(words.splice(0, Math.ceil(words.length / i)).join(" "));
+          }
+          return lines;
+        }
+
+        const getSubtitleLines = (line) => {
+          let lines = [line];
+          for (let numChunks = 2; anySubtitleLineOverflow(lines); numChunks++) {
+            lines = splitSubtitleLine(line, numChunks);
+          }
+          return lines;
+        }
+
+        // add media elements and get subtitle lines
+        for (const segment of segments) {
+          if (segment.type === "audio") {
+            segment.elem = new Audio();
+          }
+          else if (segment.type === "video") {
+            segment.elem = document.createElement("VIDEO");
+          }
+          else if (segment.type === "subtitle") {
+            segment.lines = getSubtitleLines(segment.text);
+          }
+        }
+
         // load audio files
         setState(STATE.LOADING_AUDIOS);
         const promises = []; // array to store audio loading promises
@@ -587,6 +628,7 @@
                   reject(error);
                 };
                 segment.elem.src = segment.url;
+                segment.elem.load();
               })
             );
           }
@@ -644,6 +686,7 @@
                 segment.scale = newHeight / segment.elem.videoHeight;
                 segment.elem.currentTime = 0;
                 segment.elem.volume = 0;
+                segment.elem.muted = true;
 
                 // ready to play the video
                 if (state === STATE.LOADING_VIDEOS && duration >= minDuration) {
@@ -698,6 +741,7 @@
               };
               printToConsole(`Loading video from ${segment.url}`);
               segment.elem.src = segment.url;
+              segment.elem.load();
             }
             if (segment.url.length) {
               loadVideo(segment);
@@ -939,7 +983,11 @@
         const requestFullscreen = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.msRequestFullscreen;
         const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.mozExitFullScreen || document.msExitFullscreen;
         if (!fullscreenEnabled || !requestFullscreen || !exitFullscreen) {
-          printToConsole("Fullscreen is not available");
+          if (isIOS) {
+            alert("Fullscreen is not supported on iOS devices");
+            return;
+          }
+          alert("Fullscreen is not available on this device");
           return;
         }
         const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
@@ -981,46 +1029,6 @@
           }
           container.innerHTML = "<h2>The video no longer exists</h2>";
           return;
-        }
-
-        // get subtitle lines from text
-        const anySubtitleLineOverflow = (lines) => {
-          for (const line of lines) {
-            if (line.indexOf(" ") !== -1 && ctx.measureText(line).width > subtitleWidth) {
-              return true;
-            }
-          }
-          return false;
-        }
-
-        const splitSubtitleLine = (line, numChunks) => {
-          const words = line.split(" ").filter(i => i);
-          let lines = [];
-          for (let i = numChunks; i > 0; i--) {
-            lines.push(words.splice(0, Math.ceil(words.length / i)).join(" "));
-          }
-          return lines;
-        }
-
-        const getSubtitleLines = (line) => {
-          let lines = [line];
-          for (let numChunks = 2; anySubtitleLineOverflow(lines); numChunks++) {
-            lines = splitSubtitleLine(line, numChunks);
-          }
-          return lines;
-        }
-
-        // add media elements and get subtitle lines
-        for (const segment of segments) {
-          if (segment.type === "audio") {
-            segment.elem = new Audio();
-          }
-          else if (segment.type === "video") {
-            segment.elem = document.createElement("VIDEO");
-          }
-          else if (segment.type === "subtitle") {
-            segment.lines = getSubtitleLines(segment.text);
-          }
         }
 
         setState(STATE.DRAWING_THUMBNAIL);
