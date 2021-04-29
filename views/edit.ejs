@@ -158,13 +158,13 @@
           // remove all angle brackets including the text inside
           textArea.value = textArea.value.replace(/(<.*?>)/g, "").replace(/[<>]/g, "").trim();
         }
-        if (/[^\x00-\x7F]/.test(textArea.value)) {
+        if (/[^\x20-\x7E]/.test(textArea.value)) {
           const result = confirm("Non-ascii characters cannot be used.\nDo you want to remove them?");
           if (!result) {
             return false;
           }
           // replace all non-ascii characters to space
-          textArea.value = textArea.value.replace(/[^\x00-\x7F]/g, " ").trim();
+          textArea.value = textArea.value.replace(/[^\x20-\x7E]/g, " ").trim();
         }
         saved.innerText = "Saving...";
         return true;
@@ -264,6 +264,28 @@
         }
       });
     });
+
+    const timeSpentTimer = window.setInterval(() => {
+      if (!document.hidden) {
+        fetch("/api/v1/user/timespent", {
+          method: "PUT",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" }
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.clearInterval(timeSpentTimer);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.clearInterval(timeSpentTimer);
+            window.location.href = "/";
+            return;
+          }
+        });
+      }
+    }, 1000);
   </script>
 </body>
 

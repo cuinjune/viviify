@@ -296,9 +296,9 @@ projectSchema.statics.getValidText = function (text) {
     // remove all angle brackets including the text inside
     newText = newText.replace(/(<.*?>)/g, "").replace(/[<>]/g, "").trim();
   }
-  if (/[^\x00-\x7F]/.test(newText)) {
+  if (/[^\x20-\x7E]/.test(newText)) {
     // replace all non-ascii characters to space
-    newText = newText.replace(/[^\x00-\x7F]/g, " ").trim();
+    newText = newText.replace(/[^\x20-\x7E]/g, " ").trim();
   }
   return newText;
 }

@@ -1252,7 +1252,7 @@
 
       // pause the playing video if the page becomes inactive
       document.addEventListener("visibilitychange", () => {
-        if (state === STATE.PLAYING_VIDEOS) {
+        if (document.hidden && state === STATE.PLAYING_VIDEOS) {
           pausePlayingMedia();
           setState(STATE.SHOULD_PAUSE_VIDEOS);
         }

@@ -558,16 +558,9 @@ router.get("/api/v1/user/logout", auth, (req, res) => {
     if (err) {
       return res.status(400).json({ error: true, message: err });
     }
-    const sessionTimeSpent = (new Date() - new Date(req.user.lastLoginDate)) / (1000 * 60);
-    const timeSpent = req.user.timeSpent + sessionTimeSpent;
-    User.findByIdAndUpdate({ _id: req.user._id }, { timeSpent }, { new: true }, (err, user) => {
-      if (err) {
-        return res.status(400).json({ error: true, message: err });
-      }
-      return res.status(200).json({
-        auth: true,
-        message: "Successfully logged out the user"
-      });
+    return res.status(200).json({
+      auth: true,
+      message: "Successfully logged out the user"
     });
   });
 });
@@ -681,6 +674,20 @@ router.put("/api/v1/user/name", auth, (req, res) => {
     return res.status(200).json({
       auth: true,
       message: "Successfully updated the name"
+    });
+  });
+});
+
+// update user's time spent (updated every second while on app.ejs or edit.ejs)
+router.put("/api/v1/user/timespent", auth, (req, res) => {
+  const timeSpent = req.user.timeSpent + 1 / 60;
+  User.findByIdAndUpdate({ _id: req.user._id }, { timeSpent }, { new: true }, (err, user) => {
+    if (err) {
+      return res.status(400).json({ error: true, message: err });
+    }
+    return res.status(200).json({
+      auth: true,
+      message: "Successfully updated the timeSpent"
     });
   });
 });
@@ -802,9 +809,23 @@ router.get("/api/v1/admin/projects", auth, (req, res) => {
   });
 });
 
+// get a project by id as admin user
+router.get("/api/v1/admin/project/:id", auth, (req, res) => {
+  Project.findById({ _id: req.params.id }, (err, project) => {
+    if (err) {
+      return res.status(400).json({ error: true, message: err });
+    }
+    return res.status(200).json({
+      auth: true,
+      message: "Successfully got the project",
+      project
+    });
+  });
+});
+
 // delete a project by id as admin user
 router.delete("/api/v1/admin/project/:id", auth, (req, res) => {
-  Project.findByIdAndDelete({ _id: req.params.id }, (err, user) => {
+  Project.findByIdAndDelete({ _id: req.params.id }, (err, project) => {
     if (err) {
       return res.status(400).json({ error: true, message: err });
     }
@@ -815,9 +836,8 @@ router.delete("/api/v1/admin/project/:id", auth, (req, res) => {
   });
 });
 
-// delete all users and projects (should not be used in production)
+// delete all users and projects
 router.put("/api/v1/admin/reset", auth, (req, res) => {
-  // return res.status(400).json({ auth: false, message: "Not for production" });
   if (req.user.email !== "admin@viviify.com") {
     return res.status(400).json({ auth: false, message: "Only the main admin is allowed to reset the database" });
   }

@@ -52,6 +52,8 @@
       const form = document.getElementById("main-form");
       const search = document.getElementById("main-form-search");
       const projectsContainer = document.getElementById("main-projects");
+      let isUpdating = false;
+      let inputTimer = null;
 
       logo.addEventListener("click", () => {
         zenscroll.toY(0);
@@ -76,6 +78,7 @@
       });
 
       const updateProjects = (searchValue) => {
+        isUpdating = true;
         fetch(`/api/v1/projects?${new URLSearchParams({ q: searchValue || "" })}`, {
           method: "GET"
         }).then(response => response.json()).then((data) => {
@@ -115,8 +118,7 @@
                 alert(data.message);
                 return;
               }
-              // updateProjects(search.value);
-              window.location.href = `/edit/${data.urlKey}`;;
+              window.location.href = `/edit/${data.urlKey}`;
             });
           });
           projectsContainer.appendChild(newContainer);
@@ -176,6 +178,7 @@
             // add project container to the projects container
             projectsContainer.appendChild(projectContainer);
           }
+          isUpdating = false;
         });
       };
       updateProjects();
@@ -185,7 +188,17 @@
       });
 
       search.addEventListener("input", () => {
-        updateProjects(search.value);
+        if (inputTimer) {
+          window.clearInterval(inputTimer);
+          inputTimer = null;
+        }
+        inputTimer = window.setInterval(() => {
+          if (!isUpdating) {
+            updateProjects(search.value);
+            window.clearInterval(inputTimer);
+            return;
+          }
+        }, 100);
       });
     }
 
@@ -198,6 +211,28 @@
         window.setTimeout(init, 100); // projects don't update on back button page load without the delay
       }
     });
+
+    const timeSpentTimer = window.setInterval(() => {
+      if (!document.hidden) {
+        fetch("/api/v1/user/timespent", {
+          method: "PUT",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" }
+        }).then(response => response.json()).then((data) => {
+          if (data.error) {
+            alert(data.message);
+            window.clearInterval(timeSpentTimer);
+            window.location.href = "/";
+            return;
+          }
+          if (!data.auth) {
+            alert(data.message);
+            window.clearInterval(timeSpentTimer);
+            window.location.href = "/";
+            return;
+          }
+        });
+      }
+    }, 1000);
   </script>
 </body>
 
