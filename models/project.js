@@ -284,6 +284,9 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
 // get valid text
 projectSchema.statics.getValidText = function (text) {
   let newText = text.trim();
+  if (!newText.length) {
+    return newText;
+  }
   if (/[[\]]/.test(newText)) {
     // remove all square brackets including the text inside
     newText = newText.replace(/(\[.*?\])/g, "").replace(/[[\]]/g, "").trim();
