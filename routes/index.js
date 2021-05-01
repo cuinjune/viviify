@@ -273,18 +273,28 @@ router.put("/api/v1/project/:urlKey", auth, (req, res) => {
     }
     const rateLimiter = req.user.role === "basic" ? rateLimiterBasic : rateLimiterPremium;
     rateLimiter.consume(req.user._id).then(() => {
-      updatedData.lastModifiedDate = new Date().toISOString();
-      project.getSegments(updatedData, (err, data) => {
-        if (err) {
-          return res.status(400).json({ error: true, message: err });
+      fetch("http://localhost:8001/api/v1/flask/keywords", {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ text: updatedData.text })
+      }).then(response => response.json()).then((data) => {
+        if (!data.auth) {
+          return res.status(200).json(data);
         }
-        Project.findOneAndUpdate({ urlKey: req.params.urlKey }, data, { new: true }, (err, project) => {
+        updatedData.keywords = data.keywords;
+        project.getSegments(updatedData, (err, data) => {
           if (err) {
             return res.status(400).json({ error: true, message: err });
           }
-          return res.status(200).json({
-            auth: true,
-            message: "Successfully updated the project"
+          data.lastModifiedDate = new Date().toISOString();
+          Project.findOneAndUpdate({ urlKey: req.params.urlKey }, data, { new: true }, (err, project) => {
+            if (err) {
+              return res.status(400).json({ error: true, message: err });
+            }
+            return res.status(200).json({
+              auth: true,
+              message: "Successfully updated the project"
+            });
           });
         });
       });
@@ -465,8 +475,9 @@ router.post("/api/v1/user/signup", (req, res) => {
                 const subtitle = user.projects[0].subtitle;
                 const createdDate = signupDate;
                 const lastModifiedDate = createdDate;
+                const keywords = user.projects[0].keywords;
                 const segments = user.projects[0].segments;
-                const newProject = new Project({ text, voice, speed, subtitle, user: newUser._id, urlKey, createdDate, lastModifiedDate, segments });
+                const newProject = new Project({ text, voice, speed, subtitle, user: newUser._id, urlKey, createdDate, lastModifiedDate, keywords, segments });
                 newProject.save((err, project) => {
                   if (err) {
                     return res.status(400).json({ error: true, message: err });

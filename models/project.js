@@ -45,6 +45,10 @@ const projectSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  keywords: [{
+    type: String,
+    default: []
+  }],
   segments: [{
     type: { type: String },
     start: { type: Number },

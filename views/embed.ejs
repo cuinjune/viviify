@@ -186,6 +186,7 @@
       const brokenVideoIds = []; // broken video IDs
       const progressBarWidthGap = 30; // progress bar has width of 100% - 30px
       let state = null;
+      let keywords = [];
       let segments = [];
       let videoLength = 0;
       let maxNumVideoIds = 8; // maximum number of video IDs to store
@@ -754,7 +755,7 @@
             fetch("/api/v1/video", {
               method: "POST",
               headers: { "Accept": "application/json", "Content-Type": "application/json" },
-              body: JSON.stringify({ text: segment.text, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+              body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
             }).then(response => response.json()).then((data) => {
               if (data.error) {
                 alert(data.message);
@@ -1022,6 +1023,7 @@
           return;
         }
         setState(STATE.GOT_SEGMENTS);
+        keywords = data.project.keywords;
         segments = data.project.segments;
         if (!segments.length) {
           while (container.firstChild) {
@@ -1068,7 +1070,7 @@
         fetch("/api/v1/video", {
           method: "POST",
           headers: { "Accept": "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({ text: segment.text, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+          body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
         }).then(response => response.json()).then((data) => {
           if (data.error) {
             alert(data.message);
