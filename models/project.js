@@ -291,6 +291,10 @@ projectSchema.statics.getValidText = function (text) {
   if (!newText.length) {
     return newText;
   }
+  if (/&/.test(newText)) {
+    // replace all '&' with 'and'
+    newText = newText.replace(/\s&\s|&/g, " and ").trim();
+  }
   if (/[[\]]/.test(newText)) {
     // remove all square brackets including the text inside
     newText = newText.replace(/(\[.*?\])/g, "").replace(/[[\]]/g, "").trim();

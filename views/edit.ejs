@@ -134,6 +134,14 @@
           return false;
         }
         textArea.value = textArea.value.trim();
+        if (/&/.test(textArea.value)) {
+          const result = confirm("The symbol '&' cannot be used.\nDo you want to replace them with 'and'?");
+          if (!result) {
+            return false;
+          }
+          // replace all '&' with 'and'
+          textArea.value = textArea.value.replace(/\s&\s|&/g, " and ").trim();
+        }
         if (/[[\]]/.test(textArea.value)) {
           const result = confirm("Square brackets cannot be used.\nDo you want to remove them including the text inside?");
           if (!result) {
