@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const config = require("./../config/config");
+const ASCIIFolder = require("fold-to-ascii/lib/ascii-folder");
 const AWS = require("aws-sdk");
 const Stream = require("stream");
 const path = require("path");
@@ -291,10 +292,6 @@ projectSchema.statics.getValidText = function (text) {
   if (!newText.length) {
     return newText;
   }
-  if (/&/.test(newText)) {
-    // replace all '&' with 'and'
-    newText = newText.replace(/\s&\s|&/g, " and ").trim();
-  }
   if (/[[\]]/.test(newText)) {
     // remove all square brackets including the text inside
     newText = newText.replace(/(\[.*?\])/g, "").replace(/[[\]]/g, "").trim();
@@ -307,16 +304,15 @@ projectSchema.statics.getValidText = function (text) {
     // remove all angle brackets including the text inside
     newText = newText.replace(/(<.*?>)/g, "").replace(/[<>]/g, "").trim();
   }
+  if (/&/.test(newText)) {
+    // replace all '&' with 'and'
+    newText = newText.replace(/\s&\s|&/g, " and ").trim();
+  }
   if (/[^\x20-\x7E]/.test(newText)) {
-    // replace all non-ascii characters to space
-    newText = newText.replace(/[^\x20-\x7E]/g, " ").trim();
+    // replace all non-ascii characters to the closest ascii characters
+    newText = ASCIIFolder.foldReplacing(newText).replace(/[^\x20-\x7E]/g, "").trim();
   }
   return newText;
-}
-
-// validate text
-projectSchema.statics.validateText = function (text) {
-  return typeof text === "string" && text.length >= projectSchema.obj.text.minlength && text.length <= projectSchema.obj.text.maxlength;
 }
 
 // validate voice

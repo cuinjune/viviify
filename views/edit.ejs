@@ -106,6 +106,25 @@
       const clearText = document.getElementById("main-form-textarea-clear");
       const video = document.getElementById("main-video");
       const iframe = document.getElementById("main-video-iframe");
+      const maxNumCharacters = "<%= role %>" === "basic" ? 3000 : 12000;
+
+      const updateCharsUsed = () => {
+        charsUsed.innerText = `${textArea.value.length.toLocaleString("en-US")} characters used`;
+        charsUsed.style.color = textArea.value.length <= maxNumCharacters ? "rgb(125, 125, 125)" : "rgb(226, 83, 79)";
+        if (textArea.value.length) {
+          viviify.style.backgroundColor = "rgb(49, 243, 202)";
+          viviify.style.pointerEvents = "auto";
+          clearText.style.color = "rgb(112, 146, 255)";
+          clearText.style.pointerEvents = "auto";
+        }
+        else {
+          viviify.style.backgroundColor = "rgb(175, 175, 175)";
+          viviify.style.pointerEvents = "none";
+          clearText.style.color = "rgb(175, 175, 175)";
+          clearText.style.pointerEvents = "none";
+        }
+      }
+      updateCharsUsed();
 
       logout.addEventListener("click", () => {
         fetch("/api/v1/user/logout", {
@@ -134,14 +153,6 @@
           return false;
         }
         textArea.value = textArea.value.trim();
-        if (/&/.test(textArea.value)) {
-          const result = confirm("The symbol '&' cannot be used.\nDo you want to replace them with 'and'?");
-          if (!result) {
-            return false;
-          }
-          // replace all '&' with 'and'
-          textArea.value = textArea.value.replace(/\s&\s|&/g, " and ").trim();
-        }
         if (/[[\]]/.test(textArea.value)) {
           const result = confirm("Square brackets cannot be used.\nDo you want to remove them including the text inside?");
           if (!result) {
@@ -166,14 +177,23 @@
           // remove all angle brackets including the text inside
           textArea.value = textArea.value.replace(/(<.*?>)/g, "").replace(/[<>]/g, "").trim();
         }
-        if (/[^\x20-\x7E]/.test(textArea.value)) {
-          const result = confirm("Non-ascii characters cannot be used.\nDo you want to remove them?");
+        if (/&/.test(textArea.value)) {
+          const result = confirm("The symbol '&' cannot be used.\nDo you want to replace them with 'and'?");
           if (!result) {
             return false;
           }
-          // replace all non-ascii characters to space
-          textArea.value = textArea.value.replace(/[^\x20-\x7E]/g, " ").trim();
+          // replace all '&' with 'and'
+          textArea.value = textArea.value.replace(/\s&\s|&/g, " and ").trim();
         }
+        if (textArea.value.length > maxNumCharacters) {
+          const result = confirm(`You have exceeded the maximum characters allowed (${maxNumCharacters.toLocaleString("en-US")}) for your account. Do you want to remove the exceeded characters?`);
+          if (!result) {
+            return false;
+          }
+          // remove exceeded characters
+          textArea.value = textArea.value.substr(0, maxNumCharacters);
+        }
+        updateCharsUsed();
         saved.innerText = "Saving...";
         return true;
       }
@@ -227,25 +247,6 @@
           iframe.contentWindow.location.replace("");
         }
       });
-
-      const updateCharsUsed = () => {
-        charsUsed.innerText = `${textArea.value.length} characters used`;
-        const maxNumCharacters = "<%= role %>" === "basic" ? 3000 : 12000;
-        charsUsed.style.color = textArea.value.length <= maxNumCharacters ? "rgb(125, 125, 125)" : "rgb(226, 83, 79)";
-        if (textArea.value.length) {
-          viviify.style.backgroundColor = "rgb(49, 243, 202)";
-          viviify.style.pointerEvents = "auto";
-          clearText.style.color = "rgb(112, 146, 255)";
-          clearText.style.pointerEvents = "auto";
-        }
-        else {
-          viviify.style.backgroundColor = "rgb(175, 175, 175)";
-          viviify.style.pointerEvents = "none";
-          clearText.style.color = "rgb(175, 175, 175)";
-          clearText.style.pointerEvents = "none";
-        }
-      }
-      updateCharsUsed();
 
       textArea.addEventListener("input", () => {
         updateCharsUsed();

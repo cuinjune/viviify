@@ -242,15 +242,8 @@ router.put("/api/v1/project/:urlKey", auth, (req, res) => {
     const { text, voice, speed, subtitle } = req.body;
     const updatedData = { text: project.text, voice: project.voice, speed: project.speed, subtitle: project.subtitle };
     if (typeof text === "string") {
-      const newText = Project.getValidText(text);
       const maxNumCharacters = req.user.role === "basic" ? 3000 : 12000;
-      if (newText.length > maxNumCharacters) {
-        return res.status(400).json({ auth: false, message: `You have exceeded the maximum number of characters allowed (${maxNumCharacters}) for your account` });
-      }
-      if (!Project.validateText(newText)) {
-        return res.status(400).json({ auth: false, message: "Invalid input text" });
-      }
-      updatedData.text = newText;
+      updatedData.text = Project.getValidText(text).substr(0, maxNumCharacters);
     }
     if (voice) {
       if (!Project.validateVoice(voice)) {
