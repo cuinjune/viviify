@@ -310,7 +310,7 @@ projectSchema.statics.getValidText = function (text) {
   }
   if (/[^\x20-\x7E]/.test(newText)) {
     // replace all non-ascii characters to the closest ascii characters
-    newText = ASCIIFolder.foldReplacing(newText).replace(/[^\x20-\x7E]/g, "").trim();
+    newText = ASCIIFolder.foldReplacing(newText).replace(/\0/g, "").trim();
   }
   return newText;
 }
