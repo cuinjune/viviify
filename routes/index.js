@@ -29,10 +29,10 @@ const rateLimiterPremium = new RateLimiterMemory(
   }
 );
 
-// server under maintenance
-router.get("*", (req, res) => {
-  return res.render("error.ejs", { status: 207, message: "Sorry, the server is under maintenance" });
-});
+// // server under maintenance
+// router.get("*", (req, res) => {
+//   return res.render("error.ejs", { status: 207, message: "Sorry, the server is under maintenance" });
+// });
 
 // views
 router.get("/", auth, (req, res) => {
