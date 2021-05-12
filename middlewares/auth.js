@@ -30,10 +30,6 @@ const auth = (req, res, next) => {
 
       // non-logged-in user
       if (endpoint.startsWith("project")) { // allow public access with API key
-        if (endpoint.endsWith("segments")) { // bypass this exceptionally
-          req.user = user;
-          return next();
-        }
         const apiKey = req.headers["x-api-key"];
         if (!apiKey) {
           return res.status(400).json({ auth: false, message: "Input API key not found" });

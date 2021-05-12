@@ -79,10 +79,32 @@
             <img id="controller-share-icon" class="controller-item" src="/asset/image/share.svg" alt="Share">
           </div>
           <div id="controller-fullscreen" class="controller-elem">
-            <img id="controller-fullscreen-icon" class="controller-item" src="/asset/image/fullscreen.svg" alt="Fullscreen">
+            <img id="controller-fullscreen-icon" class="controller-item" src="/asset/image/fullscreen.svg"
+              alt="Fullscreen">
             <img id="controller-normalscreen-icon" class="controller-item" src="/asset/image/normalscreen.svg"
               alt="Normalscreen">
           </div>
+        </div>
+      </div>
+    </div>
+    <div id="change" class="canvas-overlay" style="pointer-events: none; opacity: 0;">
+      <div id="change-top">
+        <div id="change-top-center" class="change-top-elem">
+          <div id="change-top-center-page0" class="change-top-item"></div>
+          <div id="change-top-center-page1" class="change-top-item"></div>
+          <div id="change-top-center-page2" class="change-top-item"></div>
+          <div id="change-top-center-page3" class="change-top-item"></div>
+          <div id="change-top-center-page4" class="change-top-item"></div>
+          <div id="change-top-center-page5" class="change-top-item"></div>
+        </div>
+      </div>
+      <div id="change-bottom">
+        <div id="change-bottom-left" class="change-bottom-elem">
+          <img id="change-bottom-left-icon" class="change-bottom-item" src="/asset/image/change.svg" alt="Left">
+        </div>
+        <div id="change-bottom-center"></div>
+        <div id="change-bottom-right" class="change-bottom-elem">
+          <img id="change-bottom-right-icon" class="change-bottom-item" src="/asset/image/change.svg" alt="Right">
         </div>
       </div>
     </div>
@@ -123,6 +145,9 @@
       const controllerFullscreen = document.getElementById("controller-fullscreen");
       const controllerFullscreenIcon = document.getElementById("controller-fullscreen-icon");
       const controllerNormalscreenIcon = document.getElementById("controller-normalscreen-icon");
+      const change = document.getElementById("change");
+      const changeBottomLeft = document.getElementById("change-bottom-left");
+      const changeBottomRight = document.getElementById("change-bottom-right");
 
       if (!"<%= urlKey %>".length) {
         container.innerHTML = "<h2>The video no longer exists</h2>";
@@ -181,16 +206,15 @@
       const subtitlePosX = canvas.width * (1 - subtitleWidthRatio) / 2;
       const subtitlePosY = canvas.height * (1 - subtitleHeightRatio);
       const subtitleLineHeight = ctx.measureText("M").width * 1.75;
-      const minDuration = 2000; // minimum required time to start playing the first video
-      const videoIds = []; // used to avoid using the same videos again
-      const brokenVideoIds = []; // broken video IDs
+      const minDuration = 3000; // minimum required time to start playing the first video
       const progressBarWidthGap = 30; // progress bar has width of 100% - 30px
       const corsPrefix = "https://viviify.com:8080/";
+      const brokenVideoIds = []; // array of broken video ids
+      const videoData = {}; // data used to update segments (videoData[index] = { videos: [], videoIndex: 0 })
       let state = null;
       let keywords = [];
       let segments = [];
       let videoLength = 0;
-      let maxNumVideoIds = 8; // maximum number of video IDs to store
       let segmentIndex = 0;
       let playingIndices = new Set();
       let startTime = 0;
@@ -204,12 +228,13 @@
       let controllerMiddleClickedPreviousState = null;
       let buffering = false;
       let bufferingPreviousState = null;
+      let loadingErrorCount = 0;
+      let previousVideoIndex = -1;
 
       const STATE = Object.freeze({
         LOADED_PAGE: Symbol("LOADED_PAGE"),
         GETTING_SEGMENTS: Symbol("GETTING_SEGMENTS"),
         GOT_SEGMENTS: Symbol("GOT_SEGMENTS"),
-        DRAWING_THUMBNAIL: Symbol("DRAWING_THUMBNAIL"),
         READY_TO_LOAD_MEDIA: Symbol("READY_TO_LOAD_MEDIA"),
         LOADING_AUDIOS: Symbol("LOADING_AUDIOS"),
         LOADED_AUDIOS: Symbol("LOADED_AUDIOS"),
@@ -234,11 +259,29 @@
       const showController = () => {
         controller.style.opacity = 1;
         controller.style.cursor = "pointer";
+        if (state === STATE.PLAYED_VIDEOS) {
+          return;
+        }
+        if (shareBackground.style.pointerEvents !== "none") {
+          return;
+        }
+        change.style.opacity = 1;
+        changeBottomLeft.style.pointerEvents = "auto";
+        changeBottomRight.style.pointerEvents = "auto";
       }
 
       const hideController = () => {
         controller.style.opacity = 0;
         controller.style.cursor = "none";
+        if (state === STATE.PLAYED_VIDEOS) {
+          return;
+        }
+        if (shareBackground.style.pointerEvents !== "none") {
+          return;
+        }
+        change.style.opacity = 0;
+        changeBottomLeft.style.pointerEvents = "none";
+        changeBottomRight.style.pointerEvents = "none";
       }
 
       const cancelHoverTimer = () => {
@@ -280,9 +323,6 @@
             break;
           case STATE.GOT_SEGMENTS:
             printToConsole("Successfully got segments");
-            break;
-          case STATE.DRAWING_THUMBNAIL:
-            printToConsole("Drawing thumbnail...");
             break;
           case STATE.READY_TO_LOAD_MEDIA:
             printToConsole("Ready to load media");
@@ -342,7 +382,12 @@
             controllerPlayIcon.style.display = "none";
             controllerPauseIcon.style.display = "block";
             controllerReplayIcon.style.display = "none";
-            hideController();
+            if (!buffering) {
+              hideController();
+            }
+            else {
+              scheduleHideController();
+            }
             break;
           case STATE.PLAYED_VIDEOS:
             printToConsole("Played videos");
@@ -353,6 +398,9 @@
             controllerReplayIcon.style.display = "block";
             controllerBackwardIcon.style.opacity = 0;
             controllerForwardIcon.style.opacity = 0;
+            change.style.opacity = 0;
+            changeBottomLeft.style.pointerEvents = "none";
+            changeBottomRight.style.pointerEvents = "none";
             showController();
             break;
           case STATE.ERROR:
@@ -387,24 +435,43 @@
 
       const pausePlayingMedia = () => {
         for (const segment of segments) {
-          if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
-            segment.elem.pause();
+          if (segment.type === "audio") {
+            if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
+              segment.elem.pause();
+            }
+          }
+          else if (segment.type === "video") {
+            const video = segment.videos[segment.videoIndex];
+            if (video && video.elem && video.elem.readyState && !video.elem.paused) {
+              video.elem.pause();
+            }
           }
         }
       }
 
       const stopPlayingMedia = () => {
         for (const segment of segments) {
-          if (segment.elem && segment.elem.readyState) {
-            if (!segment.elem.paused) {
-              segment.elem.pause();
+          if (segment.type === "audio") {
+            if (segment.elem && segment.elem.readyState) {
+              if (!segment.elem.paused) {
+                segment.elem.pause();
+              }
+              segment.elem.currentTime = 0;
             }
-            segment.elem.currentTime = 0;
+          }
+          else if (segment.type === "video") {
+            const video = segment.videos[segment.videoIndex];
+            if (video && video.elem && video.elem.readyState) {
+              if (!video.elem.paused) {
+                video.elem.pause();
+              }
+              video.elem.currentTime = 0;
+            }
           }
         }
       }
 
-      const playMedia = (segment, elapsedTime, frameTime) => {
+      const playAudio = (segment, elapsedTime, frameTime) => {
         // update media's currentTime if the difference is larger than frameTime
         const currentTime = (elapsedTime - segment.start) / 1000;
         if (Math.abs(currentTime - segment.elem.currentTime) > frameTime) {
@@ -420,8 +487,35 @@
         }
       }
 
-      const drawVideo = (segment) => {
-        ctx.drawImage(segment.elem, segment.xpos, segment.ypos, segment.width, segment.height);
+      const playVideo = (segment, video, elapsedTime, frameTime) => {
+        // update media's currentTime if the difference is larger than frameTime
+        const currentTime = (elapsedTime - segment.start) / 1000;
+        if (Math.abs(currentTime - video.elem.currentTime) > frameTime) {
+          video.elem.currentTime = currentTime;
+        }
+        if (state === STATE.PLAYING_VIDEOS) {
+          const playPromise = video.elem.play();
+          if (playPromise) {
+            playPromise.catch((error) => {
+              printToConsole(error);
+            });
+          }
+        }
+      }
+
+      const updateChangeTopPages = (videoIndex) => {
+        if (videoIndex === previousVideoIndex) {
+          return;
+        }
+        for (let i = 0; i < 6; i++) {
+          document.getElementById(`change-top-center-page${i}`).style.opacity = 0.5;
+        }
+        document.getElementById(`change-top-center-page${videoIndex}`).style.opacity = 1;
+        previousVideoIndex = videoIndex;
+      }
+
+      const drawVideo = (video) => {
+        ctx.drawImage(video.elem, video.xpos, video.ypos, video.width, video.height);
       }
 
       const drawSubtitle = (segment) => {
@@ -441,8 +535,10 @@
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           for (let i = 0; i < segments.length; i++) {
             if (segments[i].type === "video") {
-              if (segments[i].elem && segments[i].elem.readyState) {
-                drawVideo(segments[i]);
+              updateChangeTopPages(segments[i].videoIndex);
+              const video = segments[i].videos[segments[i].videoIndex];
+              if (video && video.elem && video.elem.readyState) {
+                drawVideo(video);
               }
               break;
             }
@@ -517,15 +613,17 @@
               switch (segment.type) {
                 case "audio":
                   if (segment.elem && segment.elem.readyState && segment.elem.paused) {
-                    playMedia(segment, elapsedTime, frameTime);
+                    playAudio(segment, elapsedTime, frameTime);
                   }
                   break;
                 case "video":
-                  if (segment.elem && segment.elem.readyState) {
-                    if (segment.elem.paused) {
-                      playMedia(segment, elapsedTime, frameTime);
+                  updateChangeTopPages(segment.videoIndex);
+                  const video = segment.videos[segment.videoIndex];
+                  if (video && video.elem && video.elem.readyState) {
+                    if (video.elem.paused) {
+                      playVideo(segment, video, elapsedTime, frameTime);
                     }
-                    drawVideo(segment);
+                    drawVideo(video);
                   }
                   break;
                 case "subtitle":
@@ -538,8 +636,16 @@
               }
             }
             else {
-              if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
-                segment.elem.pause();
+              if (segment.type === "audio") {
+                if (segment.elem && segment.elem.readyState && !segment.elem.paused) {
+                  segment.elem.pause();
+                }
+              }
+              else if (segment.type === "video") {
+                const video = segment.videos[segment.videoIndex];
+                if (video && video.elem && video.elem.readyState && !video.elem.paused) {
+                  video.elem.pause();
+                }
               }
               playingIndices.delete(index); // remove ended segments
             }
@@ -553,8 +659,10 @@
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           for (let i = segments.length - 1; i >= 0; i--) {
             if (segments[i].type === "video") {
-              if (segments[i].elem && segments[i].elem.readyState) {
-                drawVideo(segments[i]);
+              updateChangeTopPages(segments[i].videoIndex);
+              const video = segments[i].videos[segments[i].videoIndex];
+              if (video && video.elem && video.elem.readyState) {
+                drawVideo(video);
               }
               break;
             }
@@ -569,6 +677,38 @@
         window.requestAnimationFrame(animate);
       }
       setState(STATE.LOADED_PAGE);
+
+      const loadVideo = (video) => {
+        return new Promise((resolve, reject) => {
+          video.elem.oncanplay = () => {
+            video.elem.oncanplay = null; // prevent from being called again
+
+            // calculate xpos, ypos, width, height of the video to fit into the canvas
+            const wrh = video.elem.videoWidth / video.elem.videoHeight;
+            let newWidth = canvas.width;
+            let newHeight = newWidth / wrh;
+            if (newHeight > canvas.height) {
+              newHeight = canvas.height;
+              newWidth = newHeight * wrh;
+            }
+            video.xpos = newWidth < canvas.width ? ((canvas.width - newWidth) / 2) : 0;
+            video.ypos = newHeight < canvas.height ? ((canvas.height - newHeight) / 2) : 0;
+            video.width = newWidth;
+            video.height = newHeight;
+            video.scale = newHeight / video.elem.videoHeight;
+            video.elem.currentTime = 0;
+            video.elem.volume = 0;
+            video.elem.muted = true;
+            resolve();
+          };
+          video.elem.onerror = (error) => {
+            brokenVideoIds.push(video.id);
+            reject(error);
+          };
+          video.elem.src = `${corsPrefix}${video.url}`;
+          video.elem.load();
+        });
+      }
 
       const loadMedia = () => {
 
@@ -599,15 +739,9 @@
           return lines;
         }
 
-        // add media elements and get subtitle lines
+        // get subtitle lines
         for (const segment of segments) {
-          if (segment.type === "audio") {
-            segment.elem = new Audio();
-          }
-          else if (segment.type === "video") {
-            segment.elem = document.createElement("VIDEO");
-          }
-          else if (segment.type === "subtitle") {
+          if (segment.type === "subtitle") {
             segment.lines = getSubtitleLines(segment.text);
           }
         }
@@ -619,6 +753,7 @@
           if (segment.type === "audio") {
             promises.push(
               new Promise((resolve, reject) => {
+                segment.elem = new Audio();
                 segment.elem.crossOrigin = "anonymous";
                 segment.elem.oncanplaythrough = () => {
                   segment.elem.oncanplaythrough = null; // prevent from being called again
@@ -654,7 +789,7 @@
           }
 
           // load video from text (one by one recursively)
-          const loadVideoFromText = (index, duration) => {
+          const loadVideosFromText = (index, duration) => {
             let segment = null;
             for (let i = index; i < segments.length; i++) {
               if (segments[i].type === "video") {
@@ -672,41 +807,31 @@
               }
               return;
             }
-            const loadVideo = (segment) => {
-              segment.elem.crossOrigin = "anonymous";
-              segment.elem.oncanplay = () => {
-                segment.elem.oncanplay = null; // prevent from being called again
-
-                // calculate xpos, ypos, width, height of the video to fit into the canvas
-                const wrh = segment.elem.videoWidth / segment.elem.videoHeight;
-                let newWidth = canvas.width;
-                let newHeight = newWidth / wrh;
-                if (newHeight > canvas.height) {
-                  newHeight = canvas.height;
-                  newWidth = newHeight * wrh;
+            const loadVideos = (segment, firstLoad) => {
+              printToConsole("Loading videos...");
+              for (const video of segment.videos) {
+                video.elem = document.createElement("VIDEO");
+                video.elem.crossOrigin = "anonymous";
+              }
+              // update the videoIndex to avoid using repeated video clip
+              if (firstLoad) {
+                for (let i = 0; i < index; i++) {
+                  if (segments[i].type === "video") {
+                    if (segments[i].videos[segments[i].videoIndex].id === segment.videos[segment.videoIndex].id) {
+                      segment.videoIndex = (segment.videoIndex + 1) % segment.videos.length;
+                    }
+                  }
                 }
-                segment.xpos = newWidth < canvas.width ? ((canvas.width - newWidth) / 2) : 0;
-                segment.ypos = newHeight < canvas.height ? ((canvas.height - newHeight) / 2) : 0;
-                segment.width = newWidth;
-                segment.height = newHeight;
-                segment.scale = newHeight / segment.elem.videoHeight;
-                segment.elem.currentTime = 0;
-                segment.elem.volume = 0;
-                segment.elem.muted = true;
+              }
+              // load video at current videoIndex
+              const video = segment.videos[segment.videoIndex];
+              loadVideo(video).then(() => {
 
                 // ready to play the video
                 if (state === STATE.LOADING_VIDEOS && duration >= minDuration) {
                   onInitialLoad();
                 }
-                videoIds.push(segment.id);
-                if (videoIds.length > maxNumVideoIds) {
-                  for (let i = 0; i < videoIds.length; i++) {
-                    if (!brokenVideoIds.includes(videoIds[i])) {
-                      videoIds.splice(i, 1); // only remove unbroken video ID
-                      break;
-                    }
-                  }
-                }
+
                 // if it was buffering, release it
                 if (buffering) {
                   releaseBuffering();
@@ -715,48 +840,39 @@
                 loadedProgress = segment.end / videoLength;
                 progressLoading.style.width = `${loadedProgress * (window.innerWidth - progressBarWidthGap)}px`;
 
-                // update project's segments with the segment's index, url and id
-                fetch("/api/v1/project/<%= urlKey %>/segments", {
-                  method: "PUT",
-                  headers: { "Accept": "application/json", "Content-Type": "application/json" },
-                  body: JSON.stringify({ index: index, videoUrl: segment.url, videoId: segment.id })
-                }).then(response => response.json()).then((data) => {
-                  if (data.error) {
-                    alert(data.message);
-                    setState(STATE.ERROR);
-                    return;
-                  }
-                  if (!data.auth) {
-                    alert(data.message);
-                    setState(STATE.ERROR);
-                    return;
-                  }
-                  // call back this function
-                  loadVideoFromText(index + 1, duration);
-                });
-              };
-              segment.elem.onerror = (error) => {
-                printToConsole(`Could not load video from ${segment.url}`);
-                videoIds.push(segment.id);
-                brokenVideoIds.push(segment.id);
-                maxNumVideoIds++;
-                printToConsole("Trying again with other video...");
-                segment.url = "";
-                loadVideoFromText(index, duration - (segment.end - segment.start));
-                return;
-              };
-              printToConsole(`Loading video from ${segment.url}`);
-              segment.elem.src = `${corsPrefix}${segment.url}`;
-              segment.elem.load();
+                // add video data
+                const videos = [];
+                for (const video of segment.videos) {
+                  videos.push({ url: video.url, id: video.id }); // only need to save url and id
+                }
+                videoData[index] = { videos: videos, videoIndex: segment.videoIndex };
+
+                // reset loading error count
+                loadingErrorCount = 0;
+
+                // call back this function with the next index
+                loadVideosFromText(index + 1, duration);
+              }).catch((error) => {
+                if (loadingErrorCount >= 5) {
+                  setState(STATE.ERROR);
+                  return;
+                }
+                printToConsole(`Failed to load a video from ${video.url}`);
+                printToConsole("Getting other video...");
+                segment.videos = [];
+                loadingErrorCount++;
+                // call back this function with the current index
+                loadVideosFromText(index, duration);
+              });
             }
-            if (segment.url.length) {
-              loadVideo(segment);
+            if (segment.videos.length) {
+              loadVideos(segment, false);
               return;
             }
             fetch("/api/v1/video", {
               method: "POST",
               headers: { "Accept": "application/json", "Content-Type": "application/json" },
-              body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+              body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: brokenVideoIds })
             }).then(response => response.json()).then((data) => {
               if (data.error) {
                 alert(data.message);
@@ -768,14 +884,13 @@
                 setState(STATE.ERROR);
                 return;
               }
-              const { videoUrl, videoId } = data;
-              segment.url = videoUrl;
-              segment.id = videoId;
-              loadVideo(segment);
+              const { videos } = data;
+              segment.videos = videos;
+              loadVideos(segment, true);
             });
           }
           setState(STATE.LOADING_VIDEOS);
-          loadVideoFromText(0, 0);
+          loadVideosFromText(0, 0);
         }).catch((error) => {
           alert(error);
           setState(STATE.ERROR);
@@ -783,8 +898,12 @@
       }
 
       const showShareBackground = () => {
+        change.style.opacity = 0;
+        changeBottomLeft.style.pointerEvents = "none";
+        changeBottomRight.style.pointerEvents = "none";
         shareBackground.style.opacity = 1;
         shareBackground.style.pointerEvents = "auto";
+        window.parent.postMessage({ id: "SHOULD_UPDATE_SEGMENTS", videoData: videoData }, "*");
       }
 
       const hideShareBackground = () => {
@@ -793,6 +912,9 @@
         shareBackground.style.pointerEvents = "none";
         shareWatchCopy.value = "Copy";
         shareEmbedCopy.value = "Copy";
+        change.style.opacity = 1;
+        changeBottomLeft.style.pointerEvents = "auto";
+        changeBottomRight.style.pointerEvents = "auto";
       }
 
       const copyToClipboard = (inputElem) => {
@@ -984,6 +1106,18 @@
         playingIndices = new Set();
       }
 
+      const onFullscreenChange = () => {
+        const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (fullscreenElement) {
+          controllerFullscreenIcon.style.display = "none";
+          controllerNormalscreenIcon.style.display = "block";
+        }
+        else {
+          controllerFullscreenIcon.style.display = "block";
+          controllerNormalscreenIcon.style.display = "none";
+        }
+      }
+
       const toggleFullscreen = () => {
         const fullscreenEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled;
         const requestFullscreen = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.msRequestFullscreen;
@@ -995,16 +1129,77 @@
         const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
         if (!fullscreenElement) {
           requestFullscreen.call(container);
-          controllerFullscreenIcon.style.display = "none";
-          controllerNormalscreenIcon.style.display = "block";
           if ((isIOS || isAndroid) && screen.orientation && screen.orientation.lock) {
             screen.orientation.lock("landscape");
           }
         }
         else {
           exitFullscreen.call(document);
-          controllerFullscreenIcon.style.display = "block";
-          controllerNormalscreenIcon.style.display = "none";
+        }
+      }
+
+      const changeVideoIndex = (incrementIndex, step) => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        if (buffering) {
+          return;
+        }
+        const currentTime = progress * videoLength;
+        let currentIndex = -1;
+        for (let i = segments.length - 1; i >= 0; i--) {
+          if (segments[i].type === "video" && segments[i].start <= currentTime) {
+            currentIndex = i;
+            break;
+          }
+        }
+        if (currentIndex === -1) {
+          return;
+        }
+        const segment = segments[currentIndex];
+        let newVideoIndex = incrementIndex ? segment.videoIndex + step : segment.videoIndex - step;
+        if (newVideoIndex >= segment.videos.length) {
+          newVideoIndex = newVideoIndex - segment.videos.length;
+        }
+        else if (newVideoIndex <= -1) {
+          newVideoIndex = segment.videos.length + newVideoIndex;
+        }
+
+        const video = segment.videos[segment.videoIndex];
+        if (video && video.elem && video.elem.readyState) {
+
+          const newVideo = segment.videos[newVideoIndex];
+          if (newVideo && newVideo.elem && !newVideo.elem.readyState) {
+            startBuffering();
+            loadVideo(newVideo).then(() => {
+              // if it was buffering, release it
+              if (buffering) {
+                releaseBuffering();
+              }
+
+              // update video index
+              segment.videoIndex = newVideoIndex;
+              videoData[currentIndex].videoIndex = newVideoIndex;
+
+              // unload the previous video
+              if (!video.elem.paused) {
+                video.elem.pause();
+              }
+              video.elem.oncanplay = null;
+              video.elem.onerror = null;
+              video.elem.removeAttribute("src"); // empty source
+              video.elem.load();
+            }).catch((error) => {
+              printToConsole(`Failed to load a video from ${newVideo.url}`);
+
+              // if it was buffering, release it
+              if (buffering) {
+                releaseBuffering();
+              }
+              // increment/decrement to the next step
+              changeVideoIndex(incrementIndex, step + 1);
+            });
+          }
         }
       }
 
@@ -1034,9 +1229,17 @@
           return;
         }
 
-        setState(STATE.DRAWING_THUMBNAIL);
+        const getFirstVideoSegment = () => {
+          for (const segment of segments) {
+            if (segment.type === "video") {
+              return segment;
+            }
+          }
+        }
+        const segment = getFirstVideoSegment();
+
         const loadThumbnail = () => {
-          const thumbnailUrl = `https://i.vimeocdn.com/video/${segment.id}_1920x1080.jpg`;
+          const thumbnailUrl = `https://i.vimeocdn.com/video/${segment.videos[segment.videoIndex].id}_1920x1080.jpg`;
           thumbnail.onerror = () => {
             printToConsole(`Could not load thumbnail from ${thumbnailUrl}`);
           };
@@ -1055,15 +1258,7 @@
           }
         }
 
-        const getFirstVideoSegment = () => {
-          for (const segment of segments) {
-            if (segment.type === "video") {
-              return segment;
-            }
-          }
-        }
-        const segment = getFirstVideoSegment();
-        if (segment.id.length) {
+        if (segment.videos.length) {
           setState(STATE.READY_TO_LOAD_MEDIA);
           onReadyToLoadMedia();
           return;
@@ -1071,7 +1266,7 @@
         fetch("/api/v1/video", {
           method: "POST",
           headers: { "Accept": "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: videoIds })
+          body: JSON.stringify({ text: segment.text, keywords: keywords, duration: (segment.end - segment.start) / 1000, videoIds: brokenVideoIds })
         }).then(response => response.json()).then((data) => {
           if (data.error) {
             alert(data.message);
@@ -1083,16 +1278,19 @@
             setState(STATE.ERROR);
             return;
           }
-          const { videoUrl, videoId } = data;
-          segment.url = videoUrl;
-          segment.id = videoId;
+          const { videos } = data;
+          segment.videos = videos;
           setState(STATE.READY_TO_LOAD_MEDIA);
           onReadyToLoadMedia();
         });
       });
 
       // add event listeners
-      controller.addEventListener("mouseleave", () => {
+      controller.addEventListener("mouseleave", (event) => {
+        const target = event.toElement || event.relatedTarget;
+        if (target && target.className === "change-bottom-elem") { // ignore leaving to the change elements
+          return;
+        }
         if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
           return;
         }
@@ -1106,6 +1304,7 @@
           return;
         }
         controller.style.opacity = 0;
+        change.style.opacity = 0;
       });
 
       controllerTop.addEventListener("mousemove", () => {
@@ -1232,6 +1431,37 @@
         toggleFullscreen();
       });
 
+      changeBottomLeft.addEventListener("mousemove", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        preventHidingController();
+      });
+
+      changeBottomRight.addEventListener("mousemove", () => {
+        if (state !== STATE.PLAYING_VIDEOS && state !== STATE.PAUSED_VIDEOS) {
+          return;
+        }
+        preventHidingController();
+      });
+
+      changeBottomLeft.addEventListener("mouseup", () => {
+        changeVideoIndex(false, 1);
+        showController();
+        scheduleHideController();
+      });
+
+      changeBottomRight.addEventListener("mouseup", () => {
+        changeVideoIndex(true, 1);
+        showController();
+        scheduleHideController();
+      });
+
+      document.addEventListener("fullscreenchange", onFullscreenChange);
+      document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.addEventListener("mozfullscreenchange", onFullscreenChange);
+      document.addEventListener("MSFullscreenChange", onFullscreenChange);
+
       document.addEventListener("keydown", (event) => {
         switch (event.key.toLowerCase()) {
           case " ":
@@ -1250,6 +1480,22 @@
           case "f":
             toggleFullscreen();
             break;
+          case ",":
+            changeVideoIndex(false, 1);
+            break;
+          case ".":
+            changeVideoIndex(true, 1);
+            break;
+        }
+      });
+
+      // receive message from parent window
+      const eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+      const eventer = window[eventMethod];
+      const messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+      eventer(messageEvent, (event) => {
+        if (event.data.id === "SHOULD_SEND_VIDEO_DATA") {
+          window.parent.postMessage({ id: "SHOULD_UPDATE_SEGMENTS", videoData: videoData }, "*");
         }
       });
 

@@ -433,6 +433,111 @@
   display: none;
 }
 
+#change {
+  width: 100vw;
+  height: calc(100vw * 0.5625);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  opacity: 0;
+  -webkit-transition: opacity 0.5s;
+  -moz-transition: opacity 0.5s;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+#change-top {
+  width: 100%;
+  height: 75px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.change-top-elem {
+  width: calc(75px * 2);
+  height: calc(75px / 2);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+  pointer-events: none;
+}
+
+.change-top-item {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgb(255, 255, 255);
+  -webkit-filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 1));
+  filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 1));
+  opacity: 0;
+  -webkit-transition: opacity 0.25s;
+  -moz-transition: opacity 0.25s;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+#change-bottom {
+  width: 100%;
+  height: calc(100% - 75px - 90px);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+#change-bottom-center {
+  width: calc(100% - 75px * 2 - 30px);
+  height: 75px;
+  pointer-events: none;
+}
+
+.change-bottom-elem {
+  width: 75px;
+  height: 75px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  cursor: pointer;
+}
+
+.change-bottom-item {
+  -webkit-filter: invert(100%) drop-shadow(0px 1px 1px rgba(0, 0, 0, 1));
+  filter: invert(100%) drop-shadow(0px 1px 1px rgba(0, 0, 0, 1));
+  opacity: 0.5;
+  -webkit-transition: opacity 0.25s;
+  -moz-transition: opacity 0.25s;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+.change-bottom-elem:hover .change-bottom-item {
+  opacity: 1;
+  -webkit-transition: opacity 0.25s;
+  -moz-transition: opacity 0.25s;
+  transition: opacity 0.25s;
+}
+
+#change-bottom-left-icon {
+  height: 34px;
+  -webkit-transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -o-transform: scaleX(-1);
+  -ms-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
+
+#change-bottom-right-icon {
+  height: 34px;
+}
+
 @media screen and (max-height: calc(100vw * 0.5625)) {
   #canvas {
     width: calc(100vh * 1.7777);
@@ -451,6 +556,10 @@
     height: calc(20vh * 1.7777);
   }
   #controller {
+    width: calc(100vh * 1.7777);
+    height: 100vh;
+  }
+  #change {
     width: calc(100vh * 1.7777);
     height: 100vh;
   }

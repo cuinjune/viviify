@@ -56,7 +56,11 @@ const projectSchema = mongoose.Schema({
     end: { type: Number },
     text: { type: String },
     url: { type: String },
-    id: { type: String }
+    videos: [{
+      url: { type: String },
+      id: { type: String }
+    }],
+    videoIndex: { type: Number }
   }]
 });
 
@@ -157,7 +161,8 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
                   end: videoLength + previousVideoLength,
                   text: "",
                   url: audio,
-                  id: ""
+                  videos: [],
+                  videoIndex: 0
                 };
                 updatedData.segments.push(segment);
 
@@ -219,7 +224,8 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
                       end: end + previousVideoLength,
                       text: text,
                       url: "",
-                      id: ""
+                      videos: [],
+                      videoIndex: 0
                     };
                     updatedData.segments.push(segment);
 
@@ -251,7 +257,8 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
                           end: endTime + previousVideoLength,
                           text: newText,
                           url: "",
-                          id: ""
+                          videos: [],
+                          videoIndex: 0
                         }
                         updatedData.segments.push(segment);
                         startWordIndex = endWordIndex;
@@ -265,7 +272,8 @@ projectSchema.methods.getSegments = function (updatedData, cb) {
                         end: end + previousVideoLength,
                         text: text,
                         url: "",
-                        id: ""
+                        videos: [],
+                        videoIndex: 0
                       }
                       updatedData.segments.push(segment);
                     }

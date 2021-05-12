@@ -304,14 +304,8 @@ router.put("/api/v1/project/:urlKey", auth, (req, res) => {
   });
 });
 
-// update project segments by urlKey (called from embed.ejs)
+// update project segments by urlKey (called from edit.ejs)
 router.put("/api/v1/project/:urlKey/segments", auth, (req, res) => {
-  if (!req.user) {
-    return res.status(200).json({
-      auth: true,
-      message: "Only a logged-in user can update the segments"
-    });
-  }
   Project.findOne({ urlKey: req.params.urlKey }, (err, project) => {
     if (err) {
       return res.status(400).json({ error: true, message: err });
@@ -320,30 +314,29 @@ router.put("/api/v1/project/:urlKey/segments", auth, (req, res) => {
       return res.status(400).json({ auth: false, message: "Incorrect URL key" });
     }
     if (!project.user.equals(req.user._id)) {
-      return res.status(200).json({
-        auth: true,
-        message: "You cannot update other user's segments"
-      });
+      return res.status(200).json({ auth: false, message: "You cannot update other user's segments" });
     }
-    const { index, videoUrl, videoId } = req.body;
+    const { videoData } = req.body;
+    if (typeof videoData !== "object" || videoData == null) {
+      return res.status(400).json({ auth: false, message: "Invalid input videoData" });
+    }
     const segments = project.segments;
-    if (!Number.isInteger(index) || index < 0 || index > segments.length - 1 || segments[index].type !== "video") {
-      return res.status(400).json({ auth: false, message: "Invalid input index" });
+    for (let index in videoData) {
+      index = parseInt(index, 10);
+      if (!Number.isInteger(index) || index < 0 || index > segments.length - 1 || segments[index].type !== "video") {
+        return res.status(400).json({ auth: false, message: "Invalid input index" });
+      }
+      const videos = videoData[index].videos;
+      if (!Array.isArray(videos)) {
+        return res.status(400).json({ auth: false, message: "Invalid input videos" });
+      }
+      const videoIndex = videoData[index].videoIndex;
+      if (!Number.isInteger(videoIndex) || videoIndex < 0 || videoIndex > videos.length - 1) {
+        return res.status(400).json({ auth: false, message: "Invalid input videoIndex" });
+      }
+      segments[index].videos = videos;
+      segments[index].videoIndex = videoIndex;
     }
-    if (typeof videoUrl !== "string") {
-      return res.status(400).json({ auth: false, message: "Invalid input videoUrl" });
-    }
-    if (typeof videoId !== "string") {
-      return res.status(400).json({ auth: false, message: "Invalid input videoId" });
-    }
-    if (videoUrl === segments[index].url && videoId === segments[index].id) {
-      return res.status(200).json({
-        auth: true,
-        message: "No update was made to the segments"
-      });
-    }
-    segments[index].url = videoUrl;
-    segments[index].id = videoId;
     Project.findOneAndUpdate({ urlKey: req.params.urlKey }, { segments }, { new: true }, (err, project) => {
       if (err) {
         return res.status(400).json({ error: true, message: err });
