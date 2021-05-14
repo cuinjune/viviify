@@ -58,7 +58,8 @@
     window.addEventListener("load", () => {
       const logo = document.getElementById("header-logo");
       logo.addEventListener("click", () => {
-        zenscroll.toY(0);
+        // zenscroll.toY(0);
+        window.location.href = "/";
       });
       const iframe = document.getElementById("main-video-iframe");
       iframe.contentWindow.location.replace("/embed/hTKxNJUrXLz");

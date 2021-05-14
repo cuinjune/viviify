@@ -259,7 +259,7 @@
       const showController = () => {
         controller.style.opacity = 1;
         controller.style.cursor = "pointer";
-        if (state === STATE.PLAYED_VIDEOS) {
+        if (state === STATE.READY_TO_LOAD_MEDIA || state === STATE.READY_TO_PLAY_VIDEOS || state === STATE.PLAYED_VIDEOS) {
           return;
         }
         if (shareBackground.style.pointerEvents !== "none") {
